@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-binaries:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: bun-linux-x64
+            out: garu-linux-x64
+          - target: bun-darwin-arm64
+            out: garu-darwin-arm64
+          - target: bun-darwin-x64
+            out: garu-darwin-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.1.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile binary
+        env:
+          BUN_TARGET: ${{ matrix.target }}
+          BUN_OUTFILE: ${{ matrix.out }}
+        run: |
+          bun build ./src/index.ts \
+            --compile \
+            --target="$BUN_TARGET" \
+            --outfile="$BUN_OUTFILE"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out }}
+          path: ${{ matrix.out }}
+
+  release:
+    name: Publish release + npm
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build npm package
+        run: npm run build
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
+
+      - name: Flatten binary layout
+        run: |
+          mkdir -p dist-binaries
+          find binaries -type f -exec mv {} dist-binaries/ \;
+          ls -la dist-binaries
+
+      - name: Generate SHA256SUMS
+        working-directory: dist-binaries
+        run: sha256sum garu-* > SHA256SUMS.txt
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG_NAME" \
+            dist-binaries/garu-* \
+            dist-binaries/SHA256SUMS.txt \
+            --title "$TAG_NAME" \
+            --generate-notes
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

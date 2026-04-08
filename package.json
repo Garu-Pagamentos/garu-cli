@@ -1,0 +1,59 @@
+{
+  "name": "@garuhq/cli",
+  "version": "0.1.0",
+  "description": "Official command-line interface for the Garu payment gateway.",
+  "license": "MIT",
+  "homepage": "https://garu.com.br",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Garu-Pagamentos/garu-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Garu-Pagamentos/garu-cli/issues"
+  },
+  "keywords": [
+    "garu",
+    "cli",
+    "payments",
+    "pix",
+    "brazil",
+    "fintech"
+  ],
+  "type": "module",
+  "bin": {
+    "garu": "./bin/garu.cjs"
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@garuhq/node": "0.1.0",
+    "@inquirer/prompts": "5.0.2",
+    "commander": "12.0.0",
+    "picocolors": "1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.12.7",
+    "tsup": "8.0.2",
+    "tsx": "4.7.2",
+    "typescript": "5.4.5",
+    "vitest": "1.5.0"
+  }
+}

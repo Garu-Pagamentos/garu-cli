@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+*.log
+.DS_Store
+.env
+.env.*
+garu-*-*      # platform binaries
+SHA256SUMS.txt
