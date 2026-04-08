@@ -1,5 +1,3 @@
-import { password as promptPassword } from '@inquirer/prompts';
-
 import { Garu } from '@garuhq/node';
 
 import { loadCredentials, saveCredentials, upsertProfile } from '../lib/credentials.js';
@@ -18,14 +16,20 @@ export interface LoginOptions extends OutputOptions {
 export async function loginCommand(opts: LoginOptions = {}): Promise<{ profile: string }> {
   const profile = opts.profile ?? 'default';
 
+  // `@inquirer/prompts` is ESM-only; we lazy-load it via dynamic import so the
+  // tsup-built CJS entry works on Node 18 (where require-of-ESM is forbidden).
   const apiKey =
     opts.apiKey ??
-    (await promptPassword({
-      message: 'Paste your Garu API key (sk_live_... or sk_test_...)',
-      mask: '*'
-    }).catch(() => {
-      throw new CliError('user_cancelled', 'Login cancelled.');
-    }));
+    (await import('@inquirer/prompts')
+      .then(({ password }) =>
+        password({
+          message: 'Paste your Garu API key (sk_live_... or sk_test_...)',
+          mask: '*'
+        })
+      )
+      .catch(() => {
+        throw new CliError('user_cancelled', 'Login cancelled.');
+      }));
 
   if (!apiKey || !/^sk_(live|test)_[A-Za-z0-9_]+$/.test(apiKey)) {
     throw new CliError('invalid_input', 'API key must look like `sk_live_...` or `sk_test_...`.');
