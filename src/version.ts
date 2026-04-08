@@ -5,4 +5,4 @@
  * and the resulting binary has no runtime dependency on `package.json`.
  * The release workflow bumps this in lockstep with `package.json` on `v*` tags.
  */
-export const CLI_VERSION = '0.1.0';
+export const CLI_VERSION = '0.1.1';

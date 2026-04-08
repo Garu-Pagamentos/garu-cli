@@ -1,5 +1,6 @@
 import { Command, Option } from 'commander';
 
+import { CLI_VERSION } from './version.js';
 import { authSwitchCommand } from './commands/auth-switch.js';
 import {
   chargesCreateCommand,
@@ -201,9 +202,7 @@ function parseId(raw: string): number {
 }
 
 function getVersion(): string {
-  // Statically imported so `bun build --compile` can inline it.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return '0.1.0';
+  return CLI_VERSION;
 }
 
 /** Main entry invoked by `bin/garu.js` and `src/index.ts` when run directly. */
@@ -212,13 +211,8 @@ export async function main(argv: string[] = process.argv): Promise<void> {
   await program.parseAsync(argv);
 }
 
-// Auto-run when invoked directly (not imported).
-const invokedDirectly =
-  typeof process !== 'undefined' &&
-  Array.isArray(process.argv) &&
-  process.argv[1] !== undefined &&
-  /garu(-cli)?(\.(cjs|js|ts))?$/.test(process.argv[1] ?? '');
-
-if (invokedDirectly) {
-  main().catch((err) => printErrorAndExit(err));
-}
+// This module is only ever loaded as the CLI entry point — either through the
+// `bin/garu.cjs` shim for npm installs or as the compiled binary produced by
+// `bun build --compile`. No test imports `src/index.ts`, so it's safe to call
+// `main()` unconditionally at module load time.
+main().catch((err) => printErrorAndExit(err));

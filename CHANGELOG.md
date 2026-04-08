@@ -3,6 +3,18 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.1.1] — 2026-04-08
+
+### Fixed
+
+- Compiled binaries (produced by `bun build --compile`) now run correctly when
+  distributed under names like `garu-darwin-arm64` before being renamed by the
+  installer. v0.1.0 had an entry-point guard that only matched filenames ending
+  in `garu`/`garu.cjs`, so the downloaded binary was a no-op until renamed.
+- The npm package `0.1.0` is not affected because the `bin/garu.cjs` wrapper
+  always matched the guard. 0.1.0 remains published; 0.1.1 is the first release
+  where both `curl | bash` and `npm install -g` ship a working CLI.
+
 ## [0.1.0] — 2026-04-08
 
 ### Added
