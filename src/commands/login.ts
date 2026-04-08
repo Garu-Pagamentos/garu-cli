@@ -31,17 +31,14 @@ export async function loginCommand(opts: LoginOptions = {}): Promise<{ profile: 
     throw new CliError('invalid_input', 'API key must look like `sk_live_...` or `sk_test_...`.');
   }
 
-  printStatus('Validating key with Garu...', opts);
-  const garu = new Garu({
-    apiKey,
-    ...(opts.baseUrl !== undefined ? { baseUrl: opts.baseUrl } : {})
-  });
+  printStatus('Checking connectivity to Garu...', opts);
+  const garu = new Garu({ apiKey, baseUrl: opts.baseUrl });
 
-  // Hit an unauthenticated endpoint first to confirm connectivity, then use
-  // the authenticated path to prove the key works. `meta.get` tests reachability;
-  // we don't yet have a light authed endpoint to verify the key, so the key is
-  // stored after basic format + reachability checks. A real auth probe will
-  // land once the backend exposes `GET /api/v1/me`.
+  // We hit the unauthenticated `/api/meta` to verify the SDK can reach the
+  // backend. We do NOT yet verify the key is accepted — that requires an
+  // authenticated probe endpoint (tracked as a Chunk 2b backend follow-up:
+  // expose `GET /api/v1/me`). Until then, a malformed-but-valid-shape key
+  // will be saved and fail on the next real command.
   await garu.meta.get();
 
   const file = await loadCredentials();

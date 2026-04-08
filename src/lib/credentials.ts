@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { mkdir, readFile, writeFile, rm, stat } from 'node:fs/promises';
 
 import { CliError } from './errors.js';
@@ -66,8 +66,7 @@ export async function saveCredentials(
   env: NodeJS.ProcessEnv = process.env
 ): Promise<void> {
   const path = credentialsPath(env);
-  const dir = path.slice(0, path.lastIndexOf('/'));
-  await mkdir(dir, { recursive: true, mode: 0o700 });
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   await writeFile(path, JSON.stringify(file, null, 2) + '\n', { mode: 0o600 });
 }
 

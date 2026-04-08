@@ -21,6 +21,13 @@ interface GlobalFlags {
   quiet?: boolean;
 }
 
+interface CommandBaseOptions {
+  apiKey?: string;
+  profile?: string;
+  mode?: OutputMode;
+  quiet?: boolean;
+}
+
 /** Build the top-level command tree. Exposed so tests can exercise the router. */
 export function buildCli(): Command {
   const program = new Command();
@@ -28,7 +35,7 @@ export function buildCli(): Command {
   program
     .name('garu')
     .description('Command-line interface for the Garu payment gateway.')
-    .version(getVersion(), '-v, --version')
+    .version(CLI_VERSION, '-v, --version')
     .addOption(new Option('--api-key <key>', 'Garu API key (overrides env and credentials file)'))
     .addOption(new Option('-p, --profile <name>', 'credentials profile name'))
     .addOption(new Option('--json', 'emit strict JSON on stdout (forced in pipes)'))
@@ -42,12 +49,13 @@ export function buildCli(): Command {
     .option('--api-key <key>', 'pre-supply the key instead of prompting')
     .option('-p, --profile <name>', 'profile name to store under', 'default')
     .action(async (cmdOpts: { apiKey?: string; profile: string }) => {
-      const globals = getGlobals(program);
+      const base = toCommandOptions(program);
       await loginCommand({
-        ...(cmdOpts.apiKey !== undefined ? { apiKey: cmdOpts.apiKey } : {}),
+        apiKey: cmdOpts.apiKey,
         profile: cmdOpts.profile,
-        ...globalsToOutput(globals)
-      }).catch((err) => printErrorAndExit(err, globalsToOutput(globals)));
+        mode: base.mode,
+        quiet: base.quiet
+      }).catch((err) => printErrorAndExit(err, base));
     });
 
   // logout
@@ -56,11 +64,12 @@ export function buildCli(): Command {
     .description('Remove saved credentials')
     .option('-p, --profile <name>', 'only remove this profile instead of the whole file')
     .action(async (cmdOpts: { profile?: string }) => {
-      const globals = getGlobals(program);
+      const base = toCommandOptions(program);
       await logoutCommand({
-        ...(cmdOpts.profile !== undefined ? { profile: cmdOpts.profile } : {}),
-        ...globalsToOutput(globals)
-      }).catch((err) => printErrorAndExit(err, globalsToOutput(globals)));
+        profile: cmdOpts.profile,
+        mode: base.mode,
+        quiet: base.quiet
+      }).catch((err) => printErrorAndExit(err, base));
     });
 
   // auth switch
@@ -69,9 +78,9 @@ export function buildCli(): Command {
     .command('switch <profile>')
     .description('Set the active credentials profile')
     .action(async (profile: string) => {
-      const globals = getGlobals(program);
-      await authSwitchCommand({ profile, ...globalsToOutput(globals) }).catch((err) =>
-        printErrorAndExit(err, globalsToOutput(globals))
+      const base = toCommandOptions(program);
+      await authSwitchCommand({ profile, mode: base.mode, quiet: base.quiet }).catch((err) =>
+        printErrorAndExit(err, base)
       );
     });
 
@@ -98,35 +107,33 @@ export function buildCli(): Command {
     .option('--additional-info <text>', 'free-form metadata attached to the charge')
     .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
     .action(async (cmdOpts) => {
-      const globals = getGlobals(program);
-      const type = parsePaymentMethod(cmdOpts.type);
+      const base = toCommandOptions(program);
       await chargesCreateCommand({
-        type,
+        ...base,
+        type: parsePaymentMethod(cmdOpts.type),
         productId: cmdOpts.productId,
         customerName: cmdOpts.customerName,
         customerEmail: cmdOpts.customerEmail,
         customerDocument: cmdOpts.customerDocument,
         customerPhone: cmdOpts.customerPhone,
-        ...(cmdOpts.cardNumber !== undefined ? { cardNumber: cmdOpts.cardNumber } : {}),
-        ...(cmdOpts.cardCvv !== undefined ? { cardCvv: cmdOpts.cardCvv } : {}),
-        ...(cmdOpts.cardExpiration !== undefined ? { cardExpiration: cmdOpts.cardExpiration } : {}),
-        ...(cmdOpts.cardHolder !== undefined ? { cardHolder: cmdOpts.cardHolder } : {}),
-        ...(cmdOpts.installments !== undefined ? { installments: cmdOpts.installments } : {}),
-        ...(cmdOpts.additionalInfo !== undefined ? { additionalInfo: cmdOpts.additionalInfo } : {}),
-        ...(cmdOpts.idempotencyKey !== undefined ? { idempotencyKey: cmdOpts.idempotencyKey } : {}),
-        ...globalFlagsToCommandOptions(globals)
-      }).catch((err) => printErrorAndExit(err, globalsToOutput(globals)));
+        cardNumber: cmdOpts.cardNumber,
+        cardCvv: cmdOpts.cardCvv,
+        cardExpiration: cmdOpts.cardExpiration,
+        cardHolder: cmdOpts.cardHolder,
+        installments: cmdOpts.installments,
+        additionalInfo: cmdOpts.additionalInfo,
+        idempotencyKey: cmdOpts.idempotencyKey
+      }).catch((err) => printErrorAndExit(err, base));
     });
 
   charges
     .command('get <id>')
     .description('Fetch a single charge by ID')
     .action(async (id: string) => {
-      const globals = getGlobals(program);
-      await chargesGetCommand({
-        id: parseId(id),
-        ...globalFlagsToCommandOptions(globals)
-      }).catch((err) => printErrorAndExit(err, globalsToOutput(globals)));
+      const base = toCommandOptions(program);
+      await chargesGetCommand({ ...base, id: parseId(id) }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
     });
 
   charges
@@ -136,14 +143,14 @@ export function buildCli(): Command {
     .option('--reason <text>', 'optional refund reason')
     .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
     .action(async (id: string, cmdOpts) => {
-      const globals = getGlobals(program);
+      const base = toCommandOptions(program);
       await chargesRefundCommand({
+        ...base,
         id: parseId(id),
-        ...(cmdOpts.amount !== undefined ? { amount: cmdOpts.amount } : {}),
-        ...(cmdOpts.reason !== undefined ? { reason: cmdOpts.reason } : {}),
-        ...(cmdOpts.idempotencyKey !== undefined ? { idempotencyKey: cmdOpts.idempotencyKey } : {}),
-        ...globalFlagsToCommandOptions(globals)
-      }).catch((err) => printErrorAndExit(err, globalsToOutput(globals)));
+        amount: cmdOpts.amount,
+        reason: cmdOpts.reason,
+        idempotencyKey: cmdOpts.idempotencyKey
+      }).catch((err) => printErrorAndExit(err, base));
     });
 
   // doctor
@@ -151,37 +158,26 @@ export function buildCli(): Command {
     .command('doctor')
     .description('Environment diagnostic')
     .action(async () => {
-      const globals = getGlobals(program);
-      await doctorCommand({
-        ...globalFlagsToCommandOptions(globals)
-      }).catch((err) => printErrorAndExit(err, globalsToOutput(globals)));
+      const base = toCommandOptions(program);
+      await doctorCommand(base).catch((err) => printErrorAndExit(err, base));
     });
 
   return program;
 }
 
-function getGlobals(program: Command): GlobalFlags {
-  return program.opts<GlobalFlags>();
-}
-
-function globalsToOutput(globals: GlobalFlags): { mode?: OutputMode; quiet?: boolean } {
-  const out: { mode?: OutputMode; quiet?: boolean } = {};
-  if (globals.json) out.mode = 'json';
-  if (globals.quiet) out.quiet = true;
-  return out;
-}
-
-function globalFlagsToCommandOptions(globals: GlobalFlags): {
-  apiKey?: string;
-  profile?: string;
-  mode?: OutputMode;
-  quiet?: boolean;
-} {
-  const out: { apiKey?: string; profile?: string; mode?: OutputMode; quiet?: boolean } = {};
-  if (globals.apiKey) out.apiKey = globals.apiKey;
-  if (globals.profile) out.profile = globals.profile;
-  if (globals.json) out.mode = 'json';
-  if (globals.quiet) out.quiet = true;
+/**
+ * Collapse the root-command's global flags into the shape every command takes.
+ * Commander never passes `undefined` for unset flags — they're just absent — so
+ * we can forward this object to command handlers via spread without polluting
+ * their signatures with `undefined` props.
+ */
+function toCommandOptions(program: Command): CommandBaseOptions {
+  const g = program.opts<GlobalFlags>();
+  const out: CommandBaseOptions = {};
+  if (g.apiKey) out.apiKey = g.apiKey;
+  if (g.profile) out.profile = g.profile;
+  if (g.json) out.mode = 'json';
+  if (g.quiet) out.quiet = true;
   return out;
 }
 
@@ -201,11 +197,7 @@ function parseId(raw: string): number {
   return id;
 }
 
-function getVersion(): string {
-  return CLI_VERSION;
-}
-
-/** Main entry invoked by `bin/garu.js` and `src/index.ts` when run directly. */
+/** Main entry invoked by `bin/garu.cjs` and the compiled binary. */
 export async function main(argv: string[] = process.argv): Promise<void> {
   const program = buildCli();
   await program.parseAsync(argv);

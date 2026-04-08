@@ -1,7 +1,6 @@
 import { Garu } from '@garuhq/node';
 
 import type { ResolvedAuth } from './auth.js';
-import { CLI_VERSION } from '../version.js';
 
 export interface GaruClientOptions {
   auth: ResolvedAuth;
@@ -20,9 +19,4 @@ export function createGaruClient(opts: GaruClientOptions): Garu {
     apiKey: opts.auth.apiKey,
     baseUrl: opts.baseUrl
   });
-}
-
-/** User-Agent used for CLI requests. Surfaces the CLI version in backend logs. */
-export function cliUserAgent(): string {
-  return `garu-cli/${CLI_VERSION}`;
 }

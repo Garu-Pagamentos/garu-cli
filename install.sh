@@ -83,7 +83,8 @@ resolve_version() {
 
 # ── main ───────────────────────────────────────────────────────────────────────
 main() {
-  local platform version install_dir url tmp_file
+  local platform version install_dir url checksum_url tmp_file tmp_sums
+  local asset_name expected_hash actual_hash
 
   platform="$(detect_platform)"
   version="$(resolve_version)"
@@ -91,16 +92,44 @@ main() {
 
   [[ -z "$version" ]] && fail "Could not resolve the latest release tag."
 
-  url="https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}-${platform}"
+  asset_name="${BINARY_NAME}-${platform}"
+  url="https://github.com/${REPO}/releases/download/${version}/${asset_name}"
+  checksum_url="https://github.com/${REPO}/releases/download/${version}/SHA256SUMS.txt"
 
   info "Installing ${BINARY_NAME} ${version} (${platform}) → ${install_dir}/${BINARY_NAME}"
 
   tmp_file="$(mktemp)"
-  trap 'rm -f "$tmp_file"' EXIT
+  tmp_sums="$(mktemp)"
+  trap 'rm -f "$tmp_file" "$tmp_sums"' EXIT
 
   if ! curl -fsSL --output "$tmp_file" "$url"; then
     fail "Failed to download ${url}"
   fi
+
+  # Integrity check against SHA256SUMS.txt from the same release.
+  info "Verifying checksum against SHA256SUMS.txt"
+  if ! curl -fsSL --output "$tmp_sums" "$checksum_url"; then
+    fail "Failed to download checksum file ${checksum_url}. Refusing to install an unverified binary."
+  fi
+
+  expected_hash="$(grep " ${asset_name}\$" "$tmp_sums" | awk '{print $1}')"
+  if [[ -z "$expected_hash" ]]; then
+    fail "No SHA256 entry for ${asset_name} found in SHA256SUMS.txt. Refusing to install."
+  fi
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual_hash="$(sha256sum "$tmp_file" | awk '{print $1}')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual_hash="$(shasum -a 256 "$tmp_file" | awk '{print $1}')"
+  else
+    fail "Neither sha256sum nor shasum is available. Cannot verify binary integrity."
+  fi
+
+  if [[ "$actual_hash" != "$expected_hash" ]]; then
+    fail "Checksum mismatch for ${asset_name}. Expected ${expected_hash}, got ${actual_hash}. Refusing to install a tampered binary."
+  fi
+
+  success "Checksum verified"
 
   chmod +x "$tmp_file"
 

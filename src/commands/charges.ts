@@ -52,8 +52,29 @@ async function getClient(opts: ChargesGlobalOptions): Promise<Garu> {
   });
 }
 
+type ValidatedCardFields = ChargesCreateOptions & {
+  cardNumber: string;
+  cardCvv: string;
+  cardExpiration: string;
+  cardHolder: string;
+};
+
+/**
+ * Assert that a credit-card charge request has every required card field.
+ * Narrows the type so downstream code doesn't need `!` assertions.
+ */
+function assertCardFieldsPresent(opts: ChargesCreateOptions): asserts opts is ValidatedCardFields {
+  const missing: string[] = [];
+  if (!opts.cardNumber) missing.push('--card-number');
+  if (!opts.cardCvv) missing.push('--card-cvv');
+  if (!opts.cardExpiration) missing.push('--card-expiration');
+  if (!opts.cardHolder) missing.push('--card-holder');
+  if (missing.length) {
+    throw new CliError('invalid_input', `Credit-card charges require: ${missing.join(', ')}`);
+  }
+}
+
 export async function chargesCreateCommand(opts: ChargesCreateOptions): Promise<Charge> {
-  validateCreate(opts);
   const garu = await getClient(opts);
 
   const customer: Customer = {
@@ -63,24 +84,30 @@ export async function chargesCreateCommand(opts: ChargesCreateOptions): Promise<
     phone: opts.customerPhone
   };
 
-  const charge = await garu.charges.create({
+  const base = {
     productId: opts.productId,
     paymentMethod: opts.type,
     customer,
-    ...(opts.additionalInfo !== undefined ? { additionalInfo: opts.additionalInfo } : {}),
-    ...(opts.idempotencyKey !== undefined ? { idempotencyKey: opts.idempotencyKey } : {}),
-    ...(opts.type === 'credit_card' && opts.cardNumber
-      ? {
-          cardInfo: {
-            cardNumber: opts.cardNumber,
-            cvv: opts.cardCvv!,
-            expirationDate: opts.cardExpiration!,
-            holderName: opts.cardHolder!,
-            installments: opts.installments ?? 1
-          }
-        }
-      : {})
-  });
+    additionalInfo: opts.additionalInfo,
+    idempotencyKey: opts.idempotencyKey
+  };
+
+  let charge: Charge;
+  if (opts.type === 'credit_card') {
+    assertCardFieldsPresent(opts);
+    charge = await garu.charges.create({
+      ...base,
+      cardInfo: {
+        cardNumber: opts.cardNumber,
+        cvv: opts.cardCvv,
+        expirationDate: opts.cardExpiration,
+        holderName: opts.cardHolder,
+        installments: opts.installments ?? 1
+      }
+    });
+  } else {
+    charge = await garu.charges.create(base);
+  }
 
   printResult(charge, { ...opts, prettyPrint: prettyCharge });
   return charge;
@@ -102,19 +129,6 @@ export async function chargesRefundCommand(opts: ChargesRefundOptions): Promise<
   const charge = await garu.charges.refund(opts.id, params);
   printResult(charge, { ...opts, prettyPrint: prettyCharge });
   return charge;
-}
-
-function validateCreate(opts: ChargesCreateOptions): void {
-  if (opts.type === 'credit_card') {
-    const missing: string[] = [];
-    if (!opts.cardNumber) missing.push('--card-number');
-    if (!opts.cardCvv) missing.push('--card-cvv');
-    if (!opts.cardExpiration) missing.push('--card-expiration');
-    if (!opts.cardHolder) missing.push('--card-holder');
-    if (missing.length) {
-      throw new CliError('invalid_input', `Credit-card charges require: ${missing.join(', ')}`);
-    }
-  }
 }
 
 function prettyCharge(charge: Charge): string {

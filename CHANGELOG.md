@@ -3,6 +3,63 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.1.2] — 2026-04-08
+
+Post-review batch — addresses all findings from an internal code review.
+
+### Security
+
+- **`install.sh` now verifies binaries against `SHA256SUMS.txt`.** The installer
+  downloads the checksum file from the same release, grep's the expected hash
+  for the target asset, and fails the install if the binary has been tampered
+  with. Supports both `sha256sum` (Linux) and `shasum -a 256` (macOS).
+- **Credentials file path now uses `node:path`'s `dirname`** instead of a
+  `lastIndexOf('/')` slice, fixing `garu login` on Windows (`npm i -g @garuhq/cli`).
+- Upgrade dev dependencies to clear `npm audit` findings:
+  - `vitest` 1.5.0 → 4.1.3 (closes critical vitest RCE advisory)
+  - `tsup` 8.0.2 → 8.5.1, `tsx` 4.7.2 → 4.21.0
+  - `@inquirer/prompts` 5.0.2 → 8.4.1 (clears the `tmp` symlink chain)
+
+### Fixed
+
+- **`garu login` no longer claims to validate the API key.** The prompt now
+  says "Checking connectivity to Garu..." instead of "Validating key with
+  Garu..." — a key that passes the `sk_(live|test)_...` regex will still be
+  saved even if the backend would reject it. A real authenticated probe lands
+  once the backend exposes `GET /api/v1/me`.
+- **`garu logout --profile <name>` now deletes the credentials file** when the
+  removed profile was the last one, instead of leaving an orphaned
+  `activeProfile` pointing at nothing.
+- **SDK errors are now classified via `instanceof GaruError`** instead of
+  `.name.startsWith('Garu')` duck-typing.
+
+### Changed
+
+- Removed non-null assertions on credit-card fields in `charges create`;
+  replaced with a type-guard assertion so the TypeScript narrowing is
+  compile-time enforced.
+- Collapsed `globalsToOutput` + `globalFlagsToCommandOptions` into one
+  `toCommandOptions` helper. `src/index.ts` is ~25 lines shorter.
+- Removed unused `cliUserAgent()` dead code from `src/lib/client.ts`.
+
+### Infrastructure
+
+- **All third-party GitHub Actions are now SHA-pinned** in both `ci.yml` and
+  `release.yml`: `actions/checkout`, `actions/setup-node`,
+  `actions/upload-artifact`, `actions/download-artifact`, `oven-sh/setup-bun`,
+  `ludeeus/action-shellcheck`. Human-readable version as trailing comment.
+- **Release workflow asserts `package.json .version == $TAG_NAME`** before
+  publishing to npm. Mismatched tags fail fast with a clear error instead of
+  hitting `npm publish` with a stale version.
+
+### Tests
+
+- Added 6 new tests for `logoutCommand` covering: removing the last profile
+  deletes the file, removing a non-active profile preserves the active one,
+  removing the active profile elects a remaining profile, and the not-found
+  error path.
+- Total: 42 tests across 6 files (previously 36 across 5).
+
 ## [0.1.1] — 2026-04-08
 
 ### Fixed

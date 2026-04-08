@@ -4,6 +4,8 @@
  * TTY mode, strict `{"error":{"code","message"}}` on stdout + exit 1 in JSON mode.
  */
 
+import { GaruError } from '@garuhq/node';
+
 export type CliErrorCode =
   | 'auth_error'
   | 'not_found'
@@ -31,13 +33,8 @@ export class CliError extends Error {
 /** Wrap an unknown thrown value as a {@link CliError}. */
 export function toCliError(err: unknown): CliError {
   if (err instanceof CliError) return err;
-  // Duck-type the SDK's GaruError — avoids importing the SDK class hierarchy
-  // just for instanceof checks, and keeps this module dependency-free.
-  if (err && typeof err === 'object' && 'name' in err && 'code' in err) {
-    const e = err as { name: string; code: string; message?: string };
-    if (typeof e.name === 'string' && e.name.startsWith('Garu')) {
-      return new CliError(mapSdkCodeToCliCode(e.code), e.message ?? 'Request failed', 1);
-    }
+  if (err instanceof GaruError) {
+    return new CliError(mapSdkCodeToCliCode(err.code), err.message, 1);
   }
   if (err instanceof Error) return new CliError('unknown_error', err.message);
   return new CliError('unknown_error', String(err));
