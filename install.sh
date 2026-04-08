@@ -118,6 +118,8 @@ main() {
   if ! echo ":${PATH}:" | grep -q ":${install_dir}:"; then
     printf '\033[33m⚠\033[0m  %s is not on your PATH.\n' "$install_dir"
     printf '    Add this to your shell profile:\n'
+    # We want the literal $PATH in the user's shell profile, not its current expansion.
+    # shellcheck disable=SC2016
     printf '        export PATH="%s:$PATH"\n' "$install_dir"
   fi
 
