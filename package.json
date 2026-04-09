@@ -27,8 +27,8 @@
   "types": "./dist/index.d.ts",
   "files": [
     "bin",
-    "dist",
-    "!dist/*.map",
+    "dist/index.cjs",
+    "dist/index.d.cts",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"

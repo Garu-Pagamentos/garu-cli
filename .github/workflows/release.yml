@@ -49,7 +49,9 @@ jobs:
             --outfile="$BUN_OUTFILE"
 
       - name: Compute binary checksum
-        run: sha256sum ${{ matrix.out }} > ${{ matrix.out }}.sha256
+        env:
+          BUN_OUTFILE: ${{ matrix.out }}
+        run: sha256sum "$BUN_OUTFILE" > "$BUN_OUTFILE.sha256"
 
       - name: Upload artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

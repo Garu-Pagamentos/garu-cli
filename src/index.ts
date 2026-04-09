@@ -96,15 +96,15 @@ export function buildCli(): Command {
     .option('--status <status>', 'filter by status (e.g. paid, pending)')
     .option('--search <query>', 'search by customer name, email, or document')
     .option('--payment-method <method>', 'filter: pix, creditcard, boleto')
-    .action(async (cmdOpts: Record<string, unknown>) => {
+    .action(async (cmdOpts: { page?: number; limit?: number; status?: string; search?: string; paymentMethod?: string }) => {
       const base = toCommandOptions(program);
       await chargesListCommand({
         ...base,
-        page: cmdOpts.page as number | undefined,
-        limit: cmdOpts.limit as number | undefined,
-        status: cmdOpts.status as string | undefined,
-        search: cmdOpts.search as string | undefined,
-        paymentMethod: cmdOpts.paymentMethod as string | undefined
+        page: cmdOpts.page,
+        limit: cmdOpts.limit,
+        status: cmdOpts.status,
+        search: cmdOpts.search,
+        paymentMethod: cmdOpts.paymentMethod
       }).catch((err) => printErrorAndExit(err, base));
     });
 

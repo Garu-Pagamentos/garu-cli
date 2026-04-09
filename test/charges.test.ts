@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -8,7 +9,6 @@ import {
 } from '../src/commands/charges.js';
 import { CliError } from '../src/lib/errors.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
 
 beforeEach(() => {
@@ -48,7 +48,6 @@ describe('chargesCreateCommand', () => {
   it('creates a PIX charge and writes JSON to stdout', async () => {
     const fake = makeFakeGaru();
     const charge = await chargesCreateCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json',
       type: 'pix',
@@ -57,7 +56,6 @@ describe('chargesCreateCommand', () => {
     });
 
     expect(charge.id).toBe(1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((fake.charges.create as any).mock.calls[0][0]).toMatchObject({
       paymentMethod: 'pix',
       productId: 'prod-uuid'
@@ -69,7 +67,6 @@ describe('chargesCreateCommand', () => {
     const fake = makeFakeGaru();
     await expect(
       chargesCreateCommand({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         garu: fake as any,
         mode: 'json',
         type: 'credit_card',
@@ -82,7 +79,6 @@ describe('chargesCreateCommand', () => {
   it('forwards card info when --type=credit_card with all flags', async () => {
     const fake = makeFakeGaru();
     await chargesCreateCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json',
       type: 'credit_card',
@@ -95,7 +91,6 @@ describe('chargesCreateCommand', () => {
       installments: 3
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const call = (fake.charges.create as any).mock.calls[0][0];
     expect(call.cardInfo).toEqual({
       cardNumber: '4111111111111111',
@@ -111,12 +106,10 @@ describe('chargesGetCommand', () => {
   it('calls garu.charges.get with the parsed id', async () => {
     const fake = makeFakeGaru();
     await chargesGetCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json',
       id: 42
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((fake.charges.get as any).mock.calls[0][0]).toBe(42);
   });
 });
@@ -125,14 +118,12 @@ describe('chargesRefundCommand', () => {
   it('passes amount and reason through', async () => {
     const fake = makeFakeGaru();
     await chargesRefundCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json',
       id: 7,
       amount: 1000,
       reason: 'customer_request'
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const call = (fake.charges.refund as any).mock.calls[0];
     expect(call[0]).toBe(7);
     expect(call[1]).toEqual({ amount: 1000, reason: 'customer_request' });
@@ -141,12 +132,10 @@ describe('chargesRefundCommand', () => {
   it('passes an empty params object for a full refund', async () => {
     const fake = makeFakeGaru();
     await chargesRefundCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json',
       id: 7
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((fake.charges.refund as any).mock.calls[0][1]).toEqual({});
   });
 });
@@ -155,7 +144,6 @@ describe('chargesListCommand', () => {
   it('calls garu.charges.list with filters and writes JSON', async () => {
     const fake = makeFakeGaru();
     const result = await chargesListCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json',
       page: 2,
@@ -163,7 +151,6 @@ describe('chargesListCommand', () => {
       status: 'paid'
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((fake.charges.list as any).mock.calls[0][0]).toEqual({
       page: 2,
       limit: 10,
@@ -176,26 +163,22 @@ describe('chargesListCommand', () => {
   it('passes empty params for default list', async () => {
     const fake = makeFakeGaru();
     await chargesListCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json'
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((fake.charges.list as any).mock.calls[0][0]).toEqual({});
   });
 
   it('forwards search and paymentMethod params', async () => {
     const fake = makeFakeGaru();
     await chargesListCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'json',
       search: 'maria',
       paymentMethod: 'pix'
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((fake.charges.list as any).mock.calls[0][0]).toEqual({
       search: 'maria',
       paymentMethod: 'pix'
@@ -205,7 +188,6 @@ describe('chargesListCommand', () => {
   it('renders pretty output for TTY mode', async () => {
     const fake = makeFakeGaru();
     await chargesListCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'pretty'
     });
@@ -223,7 +205,6 @@ describe('chargesListCommand', () => {
       })
     });
     await chargesListCommand({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       garu: fake as any,
       mode: 'pretty'
     });

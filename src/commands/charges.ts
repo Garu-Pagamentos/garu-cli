@@ -164,7 +164,7 @@ function prettyChargeList(list: ChargeList): string {
   if (list.data.length === 0) {
     return `No charges found (page ${list.meta.page}/${list.meta.totalPages || 1})`;
   }
-  const header = `Charges (page ${list.meta.page}/${list.meta.totalPages}, ${list.meta.total} total)`;
+  const header = `Charges (page ${list.meta.page}/${list.meta.totalPages || '?'}, ${list.meta.total} total)`;
   const rows = list.data.map(
     (c) =>
       `  ${String(c.id).padStart(6)}  ${String(c.status).padEnd(14)}  ${c.paymentMethodId?.padEnd(10) ?? ''}  ${c.date}`
