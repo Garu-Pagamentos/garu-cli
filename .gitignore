@@ -7,3 +7,5 @@ coverage
 .env.*
 garu-*-*      # platform binaries
 SHA256SUMS.txt
+CLAUDE.md
+.claude/

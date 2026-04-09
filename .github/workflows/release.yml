@@ -48,11 +48,16 @@ jobs:
             --target="$BUN_TARGET" \
             --outfile="$BUN_OUTFILE"
 
+      - name: Compute binary checksum
+        run: sha256sum ${{ matrix.out }} > ${{ matrix.out }}.sha256
+
       - name: Upload artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.out }}
-          path: ${{ matrix.out }}
+          path: |
+            ${{ matrix.out }}
+            ${{ matrix.out }}.sha256
 
   release:
     name: Publish release + npm
@@ -100,6 +105,14 @@ jobs:
           find binaries -type f -exec mv {} dist-binaries/ \;
           ls -la dist-binaries
 
+      - name: Verify artifact checksums
+        working-directory: dist-binaries
+        run: |
+          for f in *.sha256; do
+            sha256sum -c "$f"
+          done
+          rm -f *.sha256
+
       - name: Generate SHA256SUMS
         working-directory: dist-binaries
         run: sha256sum garu-* > SHA256SUMS.txt
@@ -119,4 +132,4 @@ jobs:
         if: env.HAS_NPM_TOKEN == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --access public --provenance

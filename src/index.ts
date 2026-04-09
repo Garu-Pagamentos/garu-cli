@@ -5,6 +5,7 @@ import { authSwitchCommand } from './commands/auth-switch.js';
 import {
   chargesCreateCommand,
   chargesGetCommand,
+  chargesListCommand,
   chargesRefundCommand
 } from './commands/charges.js';
 import { doctorCommand } from './commands/doctor.js';
@@ -86,6 +87,26 @@ export function buildCli(): Command {
 
   // charges
   const charges = program.command('charges').description('Create, fetch, and refund charges');
+
+  charges
+    .command('list')
+    .description('List charges with pagination and filters')
+    .option('--page <n>', 'page number (1-based)', (v: string) => parseInt(v, 10))
+    .option('--limit <n>', 'items per page (1-100)', (v: string) => parseInt(v, 10))
+    .option('--status <status>', 'filter by status (e.g. paid, pending)')
+    .option('--search <query>', 'search by customer name, email, or document')
+    .option('--payment-method <method>', 'filter: pix, creditcard, boleto')
+    .action(async (cmdOpts: Record<string, unknown>) => {
+      const base = toCommandOptions(program);
+      await chargesListCommand({
+        ...base,
+        page: cmdOpts.page as number | undefined,
+        limit: cmdOpts.limit as number | undefined,
+        status: cmdOpts.status as string | undefined,
+        search: cmdOpts.search as string | undefined,
+        paymentMethod: cmdOpts.paymentMethod as string | undefined
+      }).catch((err) => printErrorAndExit(err, base));
+    });
 
   charges
     .command('create')

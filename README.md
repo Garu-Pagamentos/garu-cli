@@ -121,6 +121,12 @@ Prints a structured report of your environment:
 }
 ```
 
+## Security
+
+See [SECURITY.md](SECURITY.md) for our vulnerability disclosure policy.
+
+> **Note on credit card flags:** The `--card-number`, `--card-cvv`, and `--card-expiration` flags pass data via command-line arguments, which may be visible in shell history and process listings. For production card processing, use the [`@garuhq/node`](https://www.npmjs.com/package/@garuhq/node) SDK directly or pass the API key via the `GARU_API_KEY` environment variable rather than `--api-key`.
+
 ## License
 
 MIT.

@@ -1,4 +1,12 @@
-import type { Charge, Customer, Garu, PaymentMethod, RefundChargeParams } from '@garuhq/node';
+import type {
+  Charge,
+  ChargeList,
+  Customer,
+  Garu,
+  ListChargesParams,
+  PaymentMethod,
+  RefundChargeParams
+} from '@garuhq/node';
 
 import { resolveAuth } from '../lib/auth.js';
 import { createGaruClient } from '../lib/client.js';
@@ -31,6 +39,14 @@ export interface ChargesCreateOptions extends ChargesGlobalOptions {
 
 export interface ChargesByIdOptions extends ChargesGlobalOptions {
   id: number;
+}
+
+export interface ChargesListOptions extends ChargesGlobalOptions {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  paymentMethod?: string;
 }
 
 export interface ChargesRefundOptions extends ChargesByIdOptions {
@@ -129,6 +145,31 @@ export async function chargesRefundCommand(opts: ChargesRefundOptions): Promise<
   const charge = await garu.charges.refund(opts.id, params);
   printResult(charge, { ...opts, prettyPrint: prettyCharge });
   return charge;
+}
+
+export async function chargesListCommand(opts: ChargesListOptions): Promise<ChargeList> {
+  const garu = await getClient(opts);
+  const params: ListChargesParams = {};
+  if (opts.page !== undefined) params.page = opts.page;
+  if (opts.limit !== undefined) params.limit = opts.limit;
+  if (opts.status !== undefined) params.status = opts.status;
+  if (opts.search !== undefined) params.search = opts.search;
+  if (opts.paymentMethod !== undefined) params.paymentMethod = opts.paymentMethod;
+  const result = await garu.charges.list(params);
+  printResult(result, { ...opts, prettyPrint: prettyChargeList });
+  return result;
+}
+
+function prettyChargeList(list: ChargeList): string {
+  if (list.data.length === 0) {
+    return `No charges found (page ${list.meta.page}/${list.meta.totalPages || 1})`;
+  }
+  const header = `Charges (page ${list.meta.page}/${list.meta.totalPages}, ${list.meta.total} total)`;
+  const rows = list.data.map(
+    (c) =>
+      `  ${String(c.id).padStart(6)}  ${String(c.status).padEnd(14)}  ${c.paymentMethodId?.padEnd(10) ?? ''}  ${c.date}`
+  );
+  return [header, ...rows].join('\n');
 }
 
 function prettyCharge(charge: Charge): string {
