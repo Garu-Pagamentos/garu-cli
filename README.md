@@ -73,6 +73,7 @@ garu auth switch live
 | `garu login`                     | Paste an API key, validate, save            |
 | `garu logout [--profile <name>]` | Remove saved credentials                    |
 | `garu auth switch <profile>`     | Set the active credentials profile          |
+| `garu charges list`              | List charges with pagination and filters    |
 | `garu charges create`            | Create a PIX, credit-card, or boleto charge |
 | `garu charges get <id>`          | Fetch a single charge                       |
 | `garu charges refund <id>`       | Refund a charge (full or partial)           |
