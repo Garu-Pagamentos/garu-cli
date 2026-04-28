@@ -3,6 +3,25 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.3.0] — 2026-04-28
+
+Rolls up the unpublished 0.2.0 work plus a new update notifier into a single
+release.
+
+### Added
+
+- `charges list` command — paginated listing of the authenticated seller's
+  charges with status, search, and payment-method filters. (Originally
+  shipped to git as 0.2.0 but never published to npm.)
+- Startup version-update notifier. The CLI now checks the npm registry once
+  every 24h (in a detached background process) and prints a banner at process
+  exit when a newer `@garuhq/cli` is available, suggesting how to update.
+  Silent on offline / network failures.
+
+### Changed
+
+- `@garuhq/node` SDK bumped to 0.2.0 (also from the unpublished 0.2.0 batch).
+
 ## [0.1.2] — 2026-04-08
 
 Post-review batch — addresses all findings from an internal code review.

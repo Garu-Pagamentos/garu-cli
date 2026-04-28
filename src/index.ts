@@ -218,8 +218,26 @@ function parseId(raw: string): number {
   return id;
 }
 
+/**
+ * Best-effort version-update notifier. update-notifier sets an exit handler
+ * so the banner is printed at process exit, after the user's command output.
+ * Fails silently — this is informational, not load-bearing.
+ */
+async function setupUpdateNotifier(): Promise<void> {
+  try {
+    const { default: updateNotifier } = await import('update-notifier');
+    updateNotifier({
+      pkg: { name: '@garuhq/cli', version: CLI_VERSION },
+      updateCheckInterval: 1000 * 60 * 60 * 24
+    }).notify();
+  } catch {
+    // offline / network / sandboxed env — drop silently
+  }
+}
+
 /** Main entry invoked by `bin/garu.cjs` and the compiled binary. */
 export async function main(argv: string[] = process.argv): Promise<void> {
+  await setupUpdateNotifier();
   const program = buildCli();
   await program.parseAsync(argv);
 }
