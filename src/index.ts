@@ -11,8 +11,16 @@ import {
 import { doctorCommand } from './commands/doctor.js';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
-import type { PaymentMethod } from '@garuhq/node';
-import { CliError } from './lib/errors.js';
+import {
+  webhooksEventsGetCommand,
+  webhooksEventsListCommand,
+  webhooksEventsRetryCommand
+} from './commands/webhooks.js';
+import {
+  parsePaymentMethod,
+  parsePositiveIntId,
+  parseWebhookEventStatus
+} from './lib/parse.js';
 import { printErrorAndExit, type OutputMode } from './lib/output.js';
 
 interface GlobalFlags {
@@ -152,7 +160,7 @@ export function buildCli(): Command {
     .description('Fetch a single charge by ID')
     .action(async (id: string) => {
       const base = toCommandOptions(program);
-      await chargesGetCommand({ ...base, id: parseId(id) }).catch((err) =>
+      await chargesGetCommand({ ...base, id: parsePositiveIntId(id, 'Charge ID') }).catch((err) =>
         printErrorAndExit(err, base)
       );
     });
@@ -167,10 +175,68 @@ export function buildCli(): Command {
       const base = toCommandOptions(program);
       await chargesRefundCommand({
         ...base,
-        id: parseId(id),
+        id: parsePositiveIntId(id, 'Charge ID'),
         amount: cmdOpts.amount,
         reason: cmdOpts.reason,
         idempotencyKey: cmdOpts.idempotencyKey
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  // webhooks
+  const webhooks = program.command('webhooks').description('Inspect and replay webhook deliveries');
+  const events = webhooks
+    .command('events')
+    .description('List, inspect, and resend webhook events');
+
+  events
+    .command('list')
+    .description('List webhook events with filters')
+    .option('--page <n>', 'page number (1-based)', (v: string) => parseInt(v, 10))
+    .option('--limit <n>', 'items per page (1-100)', (v: string) => parseInt(v, 10))
+    .option('--status <status>', 'filter: pending, success, or failed')
+    .option('--event-type <type>', 'filter by Garu event type, e.g. transaction.payment.paid')
+    .option('--endpoint-id <n>', 'filter by destination endpoint id', (v: string) =>
+      parseInt(v, 10)
+    )
+    .action(
+      async (cmdOpts: {
+        page?: number;
+        limit?: number;
+        status?: string;
+        eventType?: string;
+        endpointId?: number;
+      }) => {
+        const base = toCommandOptions(program);
+        await webhooksEventsListCommand({
+          ...base,
+          page: cmdOpts.page,
+          limit: cmdOpts.limit,
+          status: cmdOpts.status ? parseWebhookEventStatus(cmdOpts.status) : undefined,
+          eventType: cmdOpts.eventType,
+          endpointId: cmdOpts.endpointId
+        }).catch((err) => printErrorAndExit(err, base));
+      }
+    );
+
+  events
+    .command('get <id>')
+    .description('Fetch a single webhook event by ID')
+    .action(async (id: string) => {
+      const base = toCommandOptions(program);
+      await webhooksEventsGetCommand({
+        ...base,
+        id: parsePositiveIntId(id, 'Webhook event ID')
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  events
+    .command('retry <id>')
+    .description('Re-deliver a webhook event (resets to pending and triggers an immediate attempt)')
+    .action(async (id: string) => {
+      const base = toCommandOptions(program);
+      await webhooksEventsRetryCommand({
+        ...base,
+        id: parsePositiveIntId(id, 'Webhook event ID')
       }).catch((err) => printErrorAndExit(err, base));
     });
 
@@ -200,22 +266,6 @@ function toCommandOptions(program: Command): CommandBaseOptions {
   if (g.json) out.mode = 'json';
   if (g.quiet) out.quiet = true;
   return out;
-}
-
-function parsePaymentMethod(raw: string): PaymentMethod {
-  if (raw === 'pix' || raw === 'credit_card' || raw === 'boleto') return raw;
-  throw new CliError(
-    'invalid_input',
-    `--type must be 'pix', 'credit_card', or 'boleto' (got '${raw}')`
-  );
-}
-
-function parseId(raw: string): number {
-  const id = Number.parseInt(raw, 10);
-  if (!Number.isFinite(id) || id <= 0) {
-    throw new CliError('invalid_input', `Charge ID must be a positive integer (got '${raw}')`);
-  }
-  return id;
 }
 
 /**

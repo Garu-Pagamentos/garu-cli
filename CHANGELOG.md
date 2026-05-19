@@ -3,6 +3,30 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.4.0] — 2026-05-19
+
+### Added
+
+- `garu webhooks events` command tree — inspect and replay webhook
+  deliveries from the CLI. The dashboard "Reenviar" button is now
+  available from the API key auth path as well, which means support
+  + on-call workflows can resend events from a terminal instead of
+  having to log into the dashboard.
+  - `garu webhooks events list [--status <s>] [--event-type <t>] [--endpoint-id <n>] [--page <n>] [--limit <n>]`
+    — paginated listing with status badges (green `success`, yellow
+    `pending`, red `failed`) in TTY mode.
+  - `garu webhooks events get <id>` — fetch one webhook event with
+    the full endpoint snapshot, response status, and (truncated)
+    response body.
+  - `garu webhooks events retry <id>` — re-deliver a webhook event
+    (resets to `pending` and triggers an immediate attempt). Works on
+    any status; use this when a customer reports a missed event.
+
+### Changed
+
+- `@garuhq/node` SDK bumped to 0.11.0 for the new `webhookEvents`
+  resource and its response-shape normalization fix.
+
 ## [0.3.0] — 2026-04-28
 
 Rolls up the unpublished 0.2.0 work plus a new update notifier into a single
