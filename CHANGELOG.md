@@ -3,6 +3,16 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.4.1] — 2026-05-19
+
+### Fixed
+
+- Bump `@garuhq/node` to `0.11.1` to pick up the empty-body POST fix.
+  `garu webhooks events retry <id>` and `garu scheduled-charges resume <id>`
+  were failing against production with `Body cannot be empty when content-type
+  is set to 'application/json'`. The SDK now sends an explicit `{}` body on
+  every otherwise-empty mutation.
+
 ## [0.4.0] — 2026-05-19
 
 ### Added
