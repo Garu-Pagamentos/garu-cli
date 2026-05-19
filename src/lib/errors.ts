@@ -4,10 +4,11 @@
  * TTY mode, strict `{"error":{"code","message"}}` on stdout + exit 1 in JSON mode.
  */
 
-import { GaruError } from '@garuhq/node';
+import { GaruAPIError, GaruError } from '@garuhq/node';
 
 export type CliErrorCode =
   | 'auth_error'
+  | 'permission_error'
   | 'not_found'
   | 'validation_error'
   | 'rate_limited'
@@ -21,18 +22,33 @@ export type CliErrorCode =
 export class CliError extends Error {
   public readonly code: CliErrorCode;
   public readonly exitCode: number;
+  /** HTTP status code when the error came from a `GaruAPIError`, else `null`. */
+  public readonly status: number | null;
+  /** Raw backend response body when the error came from a `GaruAPIError`, else `undefined`. */
+  public readonly body: unknown;
 
-  constructor(code: CliErrorCode, message: string, exitCode = 1) {
+  constructor(
+    code: CliErrorCode,
+    message: string,
+    exitCode = 1,
+    status: number | null = null,
+    body: unknown = undefined
+  ) {
     super(message);
     this.name = 'CliError';
     this.code = code;
     this.exitCode = exitCode;
+    this.status = status;
+    this.body = body;
   }
 }
 
 /** Wrap an unknown thrown value as a {@link CliError}. */
 export function toCliError(err: unknown): CliError {
   if (err instanceof CliError) return err;
+  if (err instanceof GaruAPIError) {
+    return new CliError(mapSdkCodeToCliCode(err.code), err.message, 1, err.status, err.body);
+  }
   if (err instanceof GaruError) {
     return new CliError(mapSdkCodeToCliCode(err.code), err.message, 1);
   }
@@ -43,8 +59,9 @@ export function toCliError(err: unknown): CliError {
 function mapSdkCodeToCliCode(sdkCode: string): CliErrorCode {
   switch (sdkCode) {
     case 'authentication_error':
-    case 'permission_error':
       return 'auth_error';
+    case 'permission_error':
+      return 'permission_error';
     case 'not_found':
       return 'not_found';
     case 'validation_error':

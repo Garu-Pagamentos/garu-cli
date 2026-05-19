@@ -3,6 +3,32 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.4.2] — 2026-05-19
+
+### Fixed
+
+- **Error codes**: HTTP 403 responses (valid key, not your resource —
+  e.g. retrying a webhook event that belongs to another seller) were
+  previously surfaced as `auth_error`, which read like "your key is
+  bad". They now surface as `permission_error`. `auth_error` is now
+  reserved for HTTP 401 (bad/missing key).
+- **`garu --version`** correctly reports `0.4.2`. The `0.4.1` release
+  shipped with `src/version.ts:CLI_VERSION` still pinned to `'0.4.0'`
+  because that file was missed during the bump. A new `scripts/
+  check-version-sync.mjs` runs as part of `prepublishOnly` and fails
+  the build if `package.json:version` and `src/version.ts:CLI_VERSION`
+  drift apart.
+
+### Changed
+
+- **Error output**: `printErrorAndExit` now includes `status` and
+  `body` from `GaruAPIError`-derived failures.
+  - In `--json` mode, the payload gains optional `status` and `body`
+    fields: `{"error":{"code","message","status","body"}}`. Allows
+    self-diagnosis of 4xx responses without dropping to `curl`.
+  - In pretty mode, the HTTP status is shown as a dimmed line below
+    the existing `code:` line.
+
 ## [0.4.1] — 2026-05-19
 
 ### Fixed

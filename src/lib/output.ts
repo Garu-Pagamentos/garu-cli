@@ -67,7 +67,11 @@ export function printSuccess(message: string, opts: OutputOptions = {}): void {
  */
 export function printErrorAndExit(err: unknown, opts: OutputOptions = {}): never {
   const cliErr: CliError = toCliError(err);
-  const payload = { error: { code: cliErr.code, message: cliErr.message } };
+  const payload: {
+    error: { code: string; message: string; status?: number; body?: unknown };
+  } = { error: { code: cliErr.code, message: cliErr.message } };
+  if (cliErr.status !== null) payload.error.status = cliErr.status;
+  if (cliErr.body !== undefined) payload.error.body = cliErr.body;
 
   if (resolveMode(opts) === 'json') {
     process.stdout.write(`${JSON.stringify(payload)}\n`);
@@ -75,6 +79,9 @@ export function printErrorAndExit(err: unknown, opts: OutputOptions = {}): never
     process.stderr.write(`${pc.red('Error:')} ${cliErr.message}\n`);
     if (cliErr.code !== 'unknown_error') {
       process.stderr.write(`${pc.dim(`  code: ${cliErr.code}`)}\n`);
+    }
+    if (cliErr.status !== null) {
+      process.stderr.write(`${pc.dim(`  status: ${cliErr.status}`)}\n`);
     }
   }
   process.exit(cliErr.exitCode);

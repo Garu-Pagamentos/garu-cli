@@ -1,6 +1,6 @@
 {
   "name": "@garuhq/cli",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Official command-line interface for the Garu payment gateway.",
   "license": "MIT",
   "homepage": "https://garu.com.br",
@@ -42,7 +42,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "check:version-sync": "node scripts/check-version-sync.mjs",
+    "prepublishOnly": "npm run check:version-sync && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@garuhq/node": "0.11.1",
