@@ -14,6 +14,7 @@ import { logoutCommand } from './commands/logout.js';
 import {
   webhooksEventsGetCommand,
   webhooksEventsListCommand,
+  webhooksEventsResendCommand,
   webhooksEventsRetryCommand
 } from './commands/webhooks.js';
 import {
@@ -231,10 +232,25 @@ export function buildCli(): Command {
 
   events
     .command('retry <id>')
-    .description('Re-deliver a webhook event (resets to pending and triggers an immediate attempt)')
+    .description(
+      '[deprecated: prefer `resend`] Re-deliver a webhook event in place (resets the original row to pending and triggers an immediate attempt; destroys the prior failure record)'
+    )
     .action(async (id: string) => {
       const base = toCommandOptions(program);
       await webhooksEventsRetryCommand({
+        ...base,
+        id: parsePositiveIntId(id, 'Webhook event ID')
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  events
+    .command('resend <id>')
+    .description(
+      'Re-deliver a webhook event by cloning it (audit-trail preserving: original row is untouched, clone gets a new id and points back via manualResendOf)'
+    )
+    .action(async (id: string) => {
+      const base = toCommandOptions(program);
+      await webhooksEventsResendCommand({
         ...base,
         id: parsePositiveIntId(id, 'Webhook event ID')
       }).catch((err) => printErrorAndExit(err, base));

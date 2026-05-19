@@ -3,6 +3,41 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.5.0] — 2026-05-19
+
+### Added
+
+- `garu webhooks events resend <id>` — audit-trail-preserving replay
+  of a webhook event. Unlike `retry`, this does **not** mutate the
+  original row: the gateway inserts a fresh event with its own
+  numeric id that points back at the source via `manualResendOf`,
+  then dispatches that clone. The original failure record (response
+  status, response body, attempts, timestamps) stays intact.
+  - In pretty mode the CLI prints `✓ Resent event <src> → new event
+    <clone>` to stderr so the new id is impossible to miss; the
+    cloned event itself is rendered on stdout with a new `resendOf:`
+    line.
+  - In JSON mode the cloned event is the full stdout payload —
+    `.id` is the new event, `.manualResendOf` is the source.
+  - Recipient handlers will see this as a distinct delivery: the
+    gateway POSTs the clone with `Idempotency-Key:
+    resend_<originalId>`.
+
+### Deprecated
+
+- `garu webhooks events retry <id>` — kept for backwards
+  compatibility but now marked `[deprecated: prefer resend]` in
+  `--help`. `retry` resets the original row in place, which means
+  once the replay succeeds the historical record of the prior
+  failure is gone. For incident response, support workflows, and
+  any backfill where the audit trail matters, use `resend` instead.
+
+### Changed
+
+- `@garuhq/node` SDK bumped to 0.12.0 for the new
+  `webhookEvents.resend()` method and the `manualResendOf` field on
+  `WebhookEvent`.
+
 ## [0.4.2] — 2026-05-19
 
 ### Fixed

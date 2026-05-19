@@ -9,7 +9,7 @@ import pc from 'picocolors';
 
 import { resolveAuth } from '../lib/auth.js';
 import { createGaruClient } from '../lib/client.js';
-import { printResult, type OutputOptions } from '../lib/output.js';
+import { printResult, printSuccess, type OutputOptions } from '../lib/output.js';
 
 export type WebhooksGlobalOptions = OutputOptions & {
   apiKey?: string;
@@ -76,6 +76,16 @@ export async function webhooksEventsRetryCommand(
   return event;
 }
 
+export async function webhooksEventsResendCommand(
+  opts: WebhooksEventsByIdOptions
+): Promise<WebhookEvent> {
+  const garu = await getClient(opts);
+  const clone = await garu.webhookEvents.resend(opts.id);
+  printSuccess(`Resent event ${opts.id} → new event ${clone.id}`, opts);
+  printResult(clone, { ...opts, prettyPrint: prettyWebhookEvent });
+  return clone;
+}
+
 // `'pending'` and `'success'` are 7 chars; `'failed'` is 6. Pad the raw status
 // to 7 BEFORE wrapping in color so the ANSI escape sequences don't throw off
 // column alignment (.padEnd on a colored string measures bytes, not glyphs).
@@ -107,6 +117,7 @@ function prettyWebhookEvent(event: WebhookEvent): string {
     `  endpoint:      [${event.webhookEndpoint.id}] ${event.webhookEndpoint.url}`,
     `  createdAt:     ${event.createdAt}`
   ];
+  if (event.manualResendOf !== null) lines.push(`  resendOf:      ${event.manualResendOf}`);
   if (event.lastAttemptAt) lines.push(`  lastAttemptAt: ${event.lastAttemptAt}`);
   if (event.nextRetryAt) lines.push(`  nextRetryAt:   ${event.nextRetryAt}`);
   if (event.responseStatus !== null) lines.push(`  responseStatus: ${event.responseStatus}`);
