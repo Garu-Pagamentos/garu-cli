@@ -3,6 +3,38 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.6.0] — 2026-05-25
+
+### Added
+
+- `garu scheduled-charges` — a new command group for future-dated
+  charges, wrapping the full `@garuhq/node` `scheduledCharges` surface:
+  `create`, `list`, `get`, `postpone`, `pause`, `resume`, `mark-paid`,
+  `cancel-recurrence`, `cancel-at-period-end`, `change-payment-method`,
+  `clear-payment-method`, and `attempts`.
+- `garu scheduled-charges charge-now <id>` — dispatch a scheduled
+  charge immediately (the same charge + notification the daily cron
+  sends on the due date), instead of waiting for `dueDate`.
+  - **Idempotent**: a cycle whose d-day was already dispatched reports
+    `already_sent` and is **not** re-charged.
+  - The returned pt-BR `message` is always printed; in `--json` mode
+    the full `{ outcome, cycleNumber, reason?, message }` is emitted on
+    stdout.
+  - **Exits non-zero** on outcome `failed`/`not_sent` and on a 4xx
+    rejection (`400` for a non-billable status or a recurring series
+    with no open cycle; `404` if the charge isn't yours), so it
+    composes in shell pipelines. `dispatched` and `already_sent`
+    exit `0`.
+- `garu scheduled-charges create --max-recovery-days <n>` — set how
+  many days past `dueDate` the daily recovery sweep keeps auto-billing
+  a missed charge (integer 1–365). Omit for the system default (14).
+
+### Changed
+
+- `@garuhq/node` SDK bumped to 0.13.0 for the new
+  `scheduledCharges.chargeNow()` method and the `maxRecoveryDays`
+  field on create params / `ScheduledChargeRecord`.
+
 ## [0.5.0] — 2026-05-19
 
 ### Added
@@ -14,14 +46,14 @@ All notable changes to `@garuhq/cli` are documented in this file. Format:
   then dispatches that clone. The original failure record (response
   status, response body, attempts, timestamps) stays intact.
   - In pretty mode the CLI prints `✓ Resent event <src> → new event
-    <clone>` to stderr so the new id is impossible to miss; the
+<clone>` to stderr so the new id is impossible to miss; the
     cloned event itself is rendered on stdout with a new `resendOf:`
     line.
   - In JSON mode the cloned event is the full stdout payload —
     `.id` is the new event, `.manualResendOf` is the source.
   - Recipient handlers will see this as a distinct delivery: the
     gateway POSTs the clone with `Idempotency-Key:
-    resend_<originalId>`.
+resend_<originalId>`.
 
 ### Deprecated
 
@@ -50,7 +82,7 @@ All notable changes to `@garuhq/cli` are documented in this file. Format:
 - **`garu --version`** correctly reports `0.4.2`. The `0.4.1` release
   shipped with `src/version.ts:CLI_VERSION` still pinned to `'0.4.0'`
   because that file was missed during the bump. A new `scripts/
-  check-version-sync.mjs` runs as part of `prepublishOnly` and fails
+check-version-sync.mjs` runs as part of `prepublishOnly` and fails
   the build if `package.json:version` and `src/version.ts:CLI_VERSION`
   drift apart.
 
@@ -71,7 +103,7 @@ All notable changes to `@garuhq/cli` are documented in this file. Format:
 - Bump `@garuhq/node` to `0.11.1` to pick up the empty-body POST fix.
   `garu webhooks events retry <id>` and `garu scheduled-charges resume <id>`
   were failing against production with `Body cannot be empty when content-type
-  is set to 'application/json'`. The SDK now sends an explicit `{}` body on
+is set to 'application/json'`. The SDK now sends an explicit `{}` body on
   every otherwise-empty mutation.
 
 ## [0.4.0] — 2026-05-19
@@ -81,15 +113,15 @@ All notable changes to `@garuhq/cli` are documented in this file. Format:
 - `garu webhooks events` command tree — inspect and replay webhook
   deliveries from the CLI. The dashboard "Reenviar" button is now
   available from the API key auth path as well, which means support
-  + on-call workflows can resend events from a terminal instead of
-  having to log into the dashboard.
-  - `garu webhooks events list [--status <s>] [--event-type <t>] [--endpoint-id <n>] [--page <n>] [--limit <n>]`
+  - on-call workflows can resend events from a terminal instead of
+    having to log into the dashboard.
+  * `garu webhooks events list [--status <s>] [--event-type <t>] [--endpoint-id <n>] [--page <n>] [--limit <n>]`
     — paginated listing with status badges (green `success`, yellow
     `pending`, red `failed`) in TTY mode.
-  - `garu webhooks events get <id>` — fetch one webhook event with
+  * `garu webhooks events get <id>` — fetch one webhook event with
     the full endpoint snapshot, response status, and (truncated)
     response body.
-  - `garu webhooks events retry <id>` — re-deliver a webhook event
+  * `garu webhooks events retry <id>` — re-deliver a webhook event
     (resets to `pending` and triggers an immediate attempt). Works on
     any status; use this when a customer reports a missed event.
 
