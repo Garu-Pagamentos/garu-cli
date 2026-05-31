@@ -3,6 +3,35 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.0] — 2026-05-31
+
+### Added
+
+- **Pix Automático** (BACEN auto-debit recurring Pix) across the CLI.
+- `garu scheduled-charges create --methods pix_automatic` — schedule a
+  Pix Automático recurring series. The CLI validates locally that
+  `pix_automatic` is paired with `--type=recurring` **and** a
+  `--product-id`, returning an `invalid_input` error before any network
+  round-trip if either is missing.
+- `garu products` — a new command group wrapping the SDK's product
+  write surface:
+  - `garu products create --name <name> [...]` — create a product.
+  - `garu products update <id> [...]` — partial update by numeric id or
+    UUID; only the flags you pass are changed.
+  - Both accept `--pix-automatic` / `--no-pix-automatic` to toggle Pix
+    Automático on the product's subscription checkout, alongside
+    `--pix`, `--boleto`, `--credit-card`, `--value` (centavos),
+    `--installments`, `--subscription`, and related fields.
+- `garu --help` now includes an end-to-end **Pix Automático recurring
+  subscription** recipe (create the product, then schedule the
+  recurring charge).
+
+### Changed
+
+- `@garuhq/node` SDK bumped to 0.15.0 for `pix_automatic` on scheduled
+  charges, the `pixAutomatic` product field, and the new
+  `products.create()` / `products.update()` methods.
+
 ## [0.6.0] — 2026-05-25
 
 ### Added

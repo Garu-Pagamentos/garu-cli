@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { CliError } from '../src/lib/errors.js';
 import {
   parseAmountBrl,
+  parseCsvList,
   parseIntInRange,
   parseMetadata,
+  parseNonNegativeInt,
   parsePaymentMethod,
   parsePositiveIntId,
   parseRecurrenceInterval,
@@ -67,6 +69,10 @@ describe('parseScheduledPaymentMethods', () => {
 
   it('parses a single method', () => {
     expect(parseScheduledPaymentMethods('pix')).toEqual(['pix']);
+  });
+
+  it('accepts pix_automatic', () => {
+    expect(parseScheduledPaymentMethods('pix_automatic')).toEqual(['pix_automatic']);
   });
 
   it.each(['', 'crypto', 'pix,crypto'])('rejects %s as a CliError', (raw) => {
@@ -143,4 +149,34 @@ describe('parseMetadata', () => {
       expect(() => parseMetadata(raw)).toThrow(CliError);
     }
   );
+});
+
+describe('parseCsvList', () => {
+  it('splits, trims, and drops empty entries', () => {
+    expect(parseCsvList('curso, ebook ,, mentoria ')).toEqual(['curso', 'ebook', 'mentoria']);
+  });
+
+  it('returns an empty array for an empty or whitespace string', () => {
+    expect(parseCsvList('  ,  ')).toEqual([]);
+  });
+});
+
+describe('parseNonNegativeInt', () => {
+  it('accepts zero', () => {
+    expect(parseNonNegativeInt('0', '--value')).toBe(0);
+  });
+
+  it('accepts a positive integer', () => {
+    expect(parseNonNegativeInt('4990', '--value')).toBe(4990);
+  });
+
+  it('interpolates the label into the error message', () => {
+    expect(() => parseNonNegativeInt('-1', '--value')).toThrowError(
+      /--value must be a non-negative integer/
+    );
+  });
+
+  it.each(['-1', '1.5', 'abc', ''])('rejects %s as a CliError', (raw) => {
+    expect(() => parseNonNegativeInt(raw, '--value')).toThrow(CliError);
+  });
 });

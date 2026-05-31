@@ -125,9 +125,31 @@ function buildRecurrence(opts: ScheduledChargesCreateOptions): RecurrenceConfig 
   return recurrence;
 }
 
+/**
+ * Pix Automático (BACEN auto-debit) is recurring-only and always tied to a
+ * product. We enforce both locally so the user gets an instant, specific error
+ * instead of a generic 400/404 round-trip.
+ */
+function assertPixAutomaticRequirements(opts: ScheduledChargesCreateOptions): void {
+  if (!opts.methods.includes('pix_automatic')) return;
+  if (opts.type !== 'recurring') {
+    throw new CliError(
+      'invalid_input',
+      `--methods pix_automatic requires --type=recurring (Pix Automático is auto-debit recurring; got '${opts.type}')`
+    );
+  }
+  if (opts.productId === undefined) {
+    throw new CliError(
+      'invalid_input',
+      '--methods pix_automatic requires --product-id (Pix Automático must be enabled on a product)'
+    );
+  }
+}
+
 export async function scheduledChargesCreateCommand(
   opts: ScheduledChargesCreateOptions
 ): Promise<ScheduledChargeRecord> {
+  assertPixAutomaticRequirements(opts);
   const garu = await getClient(opts);
   const params: CreateScheduledChargeParams = {
     customerId: opts.customerId,

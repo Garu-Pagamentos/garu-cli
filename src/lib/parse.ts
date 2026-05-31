@@ -43,14 +43,24 @@ export function parseScheduledChargeType(raw: string): ScheduledChargeType {
   throw new CliError('invalid_input', `--type must be 'one_time' or 'recurring' (got '${raw}')`);
 }
 
-const SCHEDULED_PAYMENT_METHODS: ScheduledPaymentMethod[] = ['pix', 'boleto', 'card'];
+const SCHEDULED_PAYMENT_METHODS: ScheduledPaymentMethod[] = [
+  'pix',
+  'boleto',
+  'card',
+  'pix_automatic'
+];
 
-/** Parse a comma-separated `--methods` list into validated payment methods. */
-export function parseScheduledPaymentMethods(raw: string): ScheduledPaymentMethod[] {
-  const parts = raw
+/** Split a comma-separated CLI value into trimmed, non-empty entries. */
+export function parseCsvList(raw: string): string[] {
+  return raw
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/** Parse a comma-separated `--methods` list into validated payment methods. */
+export function parseScheduledPaymentMethods(raw: string): ScheduledPaymentMethod[] {
+  const parts = parseCsvList(raw);
   if (parts.length === 0) {
     throw new CliError(
       'invalid_input',
@@ -115,6 +125,16 @@ export function parseIntInRange(raw: string, label: string, min: number, max: nu
       'invalid_input',
       `${label} must be an integer between ${min} and ${max} (got '${raw}')`
     );
+  }
+  return n;
+}
+
+/** Parse a non-negative integer (e.g. a price in centavos, where `0` is valid). Rejects floats. */
+export function parseNonNegativeInt(raw: string, label: string): number {
+  const trimmed = raw.trim();
+  const n = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(n) || String(n) !== trimmed || n < 0) {
+    throw new CliError('invalid_input', `${label} must be a non-negative integer (got '${raw}')`);
   }
   return n;
 }

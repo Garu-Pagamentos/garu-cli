@@ -11,6 +11,7 @@ import {
 import { doctorCommand } from './commands/doctor.js';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
+import { productsCreateCommand, productsUpdateCommand } from './commands/products.js';
 import {
   scheduledChargesAttemptsCommand,
   scheduledChargesCancelAtPeriodEndCommand,
@@ -34,8 +35,10 @@ import {
 } from './commands/webhooks.js';
 import {
   parseAmountBrl,
+  parseCsvList,
   parseIntInRange,
   parseMetadata,
+  parseNonNegativeInt,
   parsePaymentMethod,
   parsePositiveIntId,
   parseRecurrenceInterval,
@@ -72,7 +75,29 @@ export function buildCli(): Command {
     .addOption(new Option('-p, --profile <name>', 'credentials profile name'))
     .addOption(new Option('--json', 'emit strict JSON on stdout (forced in pipes)'))
     .addOption(new Option('-q, --quiet', 'suppress status output; only print results and errors'))
-    .showHelpAfterError();
+    .showHelpAfterError()
+    .addHelpText(
+      'after',
+      `
+Recipes:
+  Pix Automático recurring subscription (end-to-end):
+
+    # 1. Create a product with Pix Automático enabled
+    garu products create \\
+      --name "Plano Mensal" --value 4990 \\
+      --pix --credit-card --pix-automatic \\
+      --subscription --subscription-type monthly
+
+    # 2. Schedule the recurring auto-debit charge for that product.
+    #    pix_automatic requires --type=recurring and --product-id.
+    garu scheduled-charges create \\
+      --customer-id 42 --product-id 456 \\
+      --amount 49.90 --type recurring \\
+      --due-date 2026-06-15 \\
+      --methods pix_automatic \\
+      --recurrence-interval monthly
+`
+    );
 
   // login
   program
@@ -227,9 +252,11 @@ export function buildCli(): Command {
     .requiredOption('--amount <brl>', 'decimal BRL amount, e.g. 297.50')
     .requiredOption('--type <type>', 'one_time | recurring')
     .requiredOption('--due-date <yyyy-mm-dd>', 'first due date in São Paulo time')
-    .requiredOption('--methods <list>', 'comma-separated: pix,boleto,card')
-    .option('--product-id <n>', 'product id (required when methods includes card)', (v: string) =>
-      parsePositiveIntId(v, '--product-id')
+    .requiredOption('--methods <list>', 'comma-separated: pix,boleto,card,pix_automatic')
+    .option(
+      '--product-id <n>',
+      'product id (required when methods includes card or pix_automatic)',
+      (v: string) => parsePositiveIntId(v, '--product-id')
     )
     .option('--description <text>', 'charge description')
     .option('--recurrence-interval <interval>', 'recurring cadence: weekly|monthly|yearly|…')
@@ -548,6 +575,110 @@ export function buildCli(): Command {
       await webhooksEventsResendCommand({
         ...base,
         id: parsePositiveIntId(id, 'Webhook event ID')
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  // products
+  const products = program.command('products').description('Create and update products');
+
+  products
+    .command('create')
+    .description('Create a product')
+    .requiredOption('--name <name>', 'product name')
+    .option('--value <centavos>', 'price in centavos (BRL × 100)', (v: string) =>
+      parseNonNegativeInt(v, '--value')
+    )
+    .option('--description <text>', 'product description')
+    .option('--image <url>', 'HTTPS URL of the product cover image')
+    .option('--tags <list>', 'comma-separated tags', parseCsvList)
+    .option('--pix', 'accept PIX')
+    .option('--no-pix', 'do not accept PIX')
+    .option('--boleto', 'accept boleto')
+    .option('--no-boleto', 'do not accept boleto')
+    .option('--credit-card', 'accept credit card')
+    .option('--no-credit-card', 'do not accept credit card')
+    .option('--pix-automatic', 'expose Pix Automático on the subscription checkout')
+    .option('--no-pix-automatic', 'do not expose Pix Automático')
+    .option('--installments <n>', 'max credit-card installments', (v: string) =>
+      parsePositiveIntId(v, '--installments')
+    )
+    .option('--subscription', 'mark the product as a subscription')
+    .option('--no-subscription', 'mark the product as one-time')
+    .option('--subscription-type <type>', 'subscription cadence, e.g. monthly')
+    .option('--unit-label <label>', 'unit label shown on the checkout')
+    .option('--return-url <url>', 'post-purchase redirect URL')
+    .option('--return-url-button-text <text>', 'label for the return-URL button')
+    .action(async (cmdOpts) => {
+      const base = toCommandOptions(program);
+      await productsCreateCommand({
+        ...base,
+        name: cmdOpts.name,
+        value: cmdOpts.value,
+        description: cmdOpts.description,
+        image: cmdOpts.image,
+        tags: cmdOpts.tags,
+        pix: cmdOpts.pix,
+        boleto: cmdOpts.boleto,
+        creditCard: cmdOpts.creditCard,
+        pixAutomatic: cmdOpts.pixAutomatic,
+        installments: cmdOpts.installments,
+        isSubscription: cmdOpts.subscription,
+        subscriptionType: cmdOpts.subscriptionType,
+        unitLabel: cmdOpts.unitLabel,
+        returnUrl: cmdOpts.returnUrl,
+        returnUrlButtonText: cmdOpts.returnUrlButtonText
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  products
+    .command('update <id>')
+    .description(
+      'Update a product (partial — only the flags you pass change). <id> is the numeric id or UUID'
+    )
+    .option('--name <name>', 'product name')
+    .option('--value <centavos>', 'price in centavos (BRL × 100)', (v: string) =>
+      parseNonNegativeInt(v, '--value')
+    )
+    .option('--description <text>', 'product description')
+    .option('--image <url>', 'HTTPS URL of the product cover image')
+    .option('--tags <list>', 'comma-separated tags', parseCsvList)
+    .option('--pix', 'accept PIX')
+    .option('--no-pix', 'do not accept PIX')
+    .option('--boleto', 'accept boleto')
+    .option('--no-boleto', 'do not accept boleto')
+    .option('--credit-card', 'accept credit card')
+    .option('--no-credit-card', 'do not accept credit card')
+    .option('--pix-automatic', 'expose Pix Automático on the subscription checkout')
+    .option('--no-pix-automatic', 'do not expose Pix Automático')
+    .option('--installments <n>', 'max credit-card installments', (v: string) =>
+      parsePositiveIntId(v, '--installments')
+    )
+    .option('--subscription', 'mark the product as a subscription')
+    .option('--no-subscription', 'mark the product as one-time')
+    .option('--subscription-type <type>', 'subscription cadence, e.g. monthly')
+    .option('--unit-label <label>', 'unit label shown on the checkout')
+    .option('--return-url <url>', 'post-purchase redirect URL')
+    .option('--return-url-button-text <text>', 'label for the return-URL button')
+    .action(async (id: string, cmdOpts) => {
+      const base = toCommandOptions(program);
+      await productsUpdateCommand({
+        ...base,
+        id,
+        name: cmdOpts.name,
+        value: cmdOpts.value,
+        description: cmdOpts.description,
+        image: cmdOpts.image,
+        tags: cmdOpts.tags,
+        pix: cmdOpts.pix,
+        boleto: cmdOpts.boleto,
+        creditCard: cmdOpts.creditCard,
+        pixAutomatic: cmdOpts.pixAutomatic,
+        installments: cmdOpts.installments,
+        isSubscription: cmdOpts.subscription,
+        subscriptionType: cmdOpts.subscriptionType,
+        unitLabel: cmdOpts.unitLabel,
+        returnUrl: cmdOpts.returnUrl,
+        returnUrlButtonText: cmdOpts.returnUrlButtonText
       }).catch((err) => printErrorAndExit(err, base));
     });
 

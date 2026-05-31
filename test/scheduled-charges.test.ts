@@ -147,6 +147,58 @@ describe('scheduledChargesCreateCommand', () => {
     expect(params.recurrence).toEqual({ interval: 'monthly', intervalCount: 1, endsAfter: 12 });
     expect(params.productId).toBe(5);
   });
+
+  it('forwards a pix_automatic recurring charge with its product id', async () => {
+    const fake = makeFakeGaru();
+    await scheduledChargesCreateCommand({
+      garu: fake as any,
+      mode: 'json',
+      customerId: 42,
+      amount: 49.9,
+      type: 'recurring',
+      dueDate: '2026-06-15',
+      methods: ['pix_automatic'],
+      productId: 456,
+      recurrenceInterval: 'monthly'
+    });
+
+    const params = (fake.scheduledCharges.create as any).mock.calls[0][0];
+    expect(params.methods).toEqual(['pix_automatic']);
+    expect(params.productId).toBe(456);
+  });
+
+  it('rejects pix_automatic without --type=recurring before any SDK call', async () => {
+    const fake = makeFakeGaru();
+    await expect(
+      scheduledChargesCreateCommand({
+        garu: fake as any,
+        mode: 'json',
+        customerId: 42,
+        amount: 49.9,
+        type: 'one_time',
+        dueDate: '2026-06-15',
+        methods: ['pix_automatic'],
+        productId: 456
+      })
+    ).rejects.toThrowError(/requires --type=recurring/);
+    expect((fake.scheduledCharges.create as any).mock.calls.length).toBe(0);
+  });
+
+  it('rejects pix_automatic without --product-id before any SDK call', async () => {
+    const fake = makeFakeGaru();
+    await expect(
+      scheduledChargesCreateCommand({
+        garu: fake as any,
+        mode: 'json',
+        customerId: 42,
+        amount: 49.9,
+        type: 'recurring',
+        dueDate: '2026-06-15',
+        methods: ['pix_automatic']
+      })
+    ).rejects.toThrowError(/requires --product-id/);
+    expect((fake.scheduledCharges.create as any).mock.calls.length).toBe(0);
+  });
 });
 
 describe('scheduledChargesListCommand', () => {
