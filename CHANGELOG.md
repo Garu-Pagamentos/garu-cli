@@ -3,6 +3,21 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.8.0] — 2026-07-18
+
+### Changed
+
+- **Products now use the versioned public API.** Via `@garuhq/node@0.16.0`,
+  `garu products create` / `update` hit `/api/v1/products` (uuid-keyed). The
+  numeric product id is no longer returned; product output shows the `uuid`.
+
+### Fixed
+
+- **`--value` is Reais, not centavos.** The flag was documented and parsed as
+  centavos; following the help (`--value 4990`) created a product priced 100×
+  (R$ 4.990,00 instead of R$ 49,90). `--value` now takes a decimal amount in
+  Reais (e.g. `49.90`). `charges` / refund `--amount` remain centavos.
+
 ## [0.7.0] — 2026-05-31
 
 ### Added
