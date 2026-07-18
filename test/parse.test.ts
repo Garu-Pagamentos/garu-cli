@@ -6,6 +6,7 @@ import {
   parseCsvList,
   parseIntInRange,
   parseMetadata,
+  parseNonNegativeBrl,
   parseNonNegativeInt,
   parsePaymentMethod,
   parsePositiveIntId,
@@ -178,5 +179,29 @@ describe('parseNonNegativeInt', () => {
 
   it.each(['-1', '1.5', 'abc', ''])('rejects %s as a CliError', (raw) => {
     expect(() => parseNonNegativeInt(raw, '--value')).toThrow(CliError);
+  });
+});
+
+describe('parseNonNegativeBrl', () => {
+  it('accepts a decimal price in reais (the R$49,90 case that was the centavos bug)', () => {
+    expect(parseNonNegativeBrl('49.90', '--value')).toBe(49.9);
+  });
+
+  it('accepts an integer price in reais', () => {
+    expect(parseNonNegativeBrl('297', '--value')).toBe(297);
+  });
+
+  it('accepts zero', () => {
+    expect(parseNonNegativeBrl('0', '--value')).toBe(0);
+  });
+
+  it('interpolates the label into the error message', () => {
+    expect(() => parseNonNegativeBrl('-1', '--value')).toThrowError(
+      /--value must be a non-negative amount in BRL/
+    );
+  });
+
+  it.each(['-1', 'abc', ''])('rejects %s as a CliError', (raw) => {
+    expect(() => parseNonNegativeBrl(raw, '--value')).toThrow(CliError);
   });
 });

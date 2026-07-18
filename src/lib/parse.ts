@@ -139,6 +139,20 @@ export function parseNonNegativeInt(raw: string, label: string): number {
   return n;
 }
 
+/** Parse a non-negative decimal BRL amount / reais (e.g. `49.90`; `0` is valid). */
+export function parseNonNegativeBrl(raw: string, label: string): number {
+  const trimmed = raw.trim();
+  const n = Number(trimmed);
+  // Number('') === 0, so reject empty explicitly rather than treating it as R$0.
+  if (trimmed === '' || !Number.isFinite(n) || n < 0) {
+    throw new CliError(
+      'invalid_input',
+      `${label} must be a non-negative amount in BRL/reais, e.g. 49.90 (got '${raw}')`
+    );
+  }
+  return n;
+}
+
 /** Parse a positive decimal BRL amount (e.g. `297.50`). */
 export function parseAmountBrl(raw: string): number {
   const n = Number(raw);

@@ -38,7 +38,7 @@ import {
   parseCsvList,
   parseIntInRange,
   parseMetadata,
-  parseNonNegativeInt,
+  parseNonNegativeBrl,
   parsePaymentMethod,
   parsePositiveIntId,
   parseRecurrenceInterval,
@@ -84,7 +84,7 @@ Recipes:
 
     # 1. Create a product with Pix Automático enabled
     garu products create \\
-      --name "Plano Mensal" --value 4990 \\
+      --name "Plano Mensal" --value 49.90 \\
       --pix --credit-card --pix-automatic \\
       --subscription --subscription-type monthly
 
@@ -585,8 +585,8 @@ Recipes:
     .command('create')
     .description('Create a product')
     .requiredOption('--name <name>', 'product name')
-    .option('--value <centavos>', 'price in centavos (BRL × 100)', (v: string) =>
-      parseNonNegativeInt(v, '--value')
+    .option('--value <reais>', 'price in reais / decimal BRL (e.g. 49.90)', (v: string) =>
+      parseNonNegativeBrl(v, '--value')
     )
     .option('--description <text>', 'product description')
     .option('--image <url>', 'HTTPS URL of the product cover image')
@@ -636,8 +636,8 @@ Recipes:
       'Update a product (partial — only the flags you pass change). <id> is the numeric id or UUID'
     )
     .option('--name <name>', 'product name')
-    .option('--value <centavos>', 'price in centavos (BRL × 100)', (v: string) =>
-      parseNonNegativeInt(v, '--value')
+    .option('--value <reais>', 'price in reais / decimal BRL (e.g. 49.90)', (v: string) =>
+      parseNonNegativeBrl(v, '--value')
     )
     .option('--description <text>', 'product description')
     .option('--image <url>', 'HTTPS URL of the product cover image')

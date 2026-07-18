@@ -16,7 +16,7 @@ export type ProductsGlobalOptions = OutputOptions & {
 /** Write fields shared by create and update. */
 export type ProductWriteOptions = ProductsGlobalOptions & {
   name?: string;
-  /** Price in centavos (BRL × 100), matching the SDK's `Product.value`. */
+  /** Price in decimal BRL / reais (e.g. `49.90`) — NOT centavos. Matches the API and `Product.value`. */
   value?: number;
   description?: string;
   image?: string;
@@ -103,7 +103,7 @@ function prettyProduct(p: Product): string {
   const lines = [
     `Product ${p.uuid ?? p.id}`,
     `  name:    ${p.name}`,
-    `  value:   ${p.value} (centavos)`,
+    `  value:   ${p.value} (reais)`,
     `  methods: ${methods || '(none)'}`
   ];
   if (p.description) lines.push(`  description: ${p.description}`);
