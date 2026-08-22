@@ -8,6 +8,14 @@ import {
   chargesListCommand,
   chargesRefundCommand
 } from './commands/charges.js';
+import {
+  customersCreateCommand,
+  customersDeleteCommand,
+  customersGetCommand,
+  customersListCommand,
+  customersSetBillingEmailOverrideCommand,
+  customersUpdateCommand
+} from './commands/customers.js';
 import { doctorCommand } from './commands/doctor.js';
 import {
   installmentPlansCancelCommand,
@@ -59,6 +67,7 @@ import {
   parseMetadata,
   parseNonNegativeBrl,
   parsePaymentMethod,
+  parsePersonType,
   parsePositiveIntId,
   parseRecurrenceInterval,
   parseRefundRequestStatus,
@@ -599,6 +608,142 @@ Recipes:
         ...base,
         id: parsePositiveIntId(id, 'Webhook event ID')
       }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  // customers
+  const customers = program.command('customers').description('Manage your customer base');
+
+  customers
+    .command('create')
+    .description('Register a customer for the current seller (dedup by document)')
+    .requiredOption('--name <name>', 'customer name')
+    .requiredOption('--email <email>', 'customer email')
+    .requiredOption('--document <document>', 'CPF (11 digits) or CNPJ (14 digits), digits only')
+    .requiredOption('--phone <phone>', 'phone with area code, 10-11 digits')
+    .requiredOption('--person-type <type>', "'fisica' or 'juridica'")
+    .option('--zip-code <cep>', 'ZIP code, 8 digits')
+    .option('--street <street>', 'street address')
+    .option('--number <number>', 'address number')
+    .option('--complement <text>', 'address complement')
+    .option('--neighborhood <text>', 'neighborhood')
+    .option('--city <city>', 'city')
+    .option('--state <uf>', '2-letter state code, e.g. SP')
+    .action(async (cmdOpts) => {
+      const base = toCommandOptions(program);
+      await customersCreateCommand({
+        ...base,
+        name: cmdOpts.name,
+        email: cmdOpts.email,
+        document: cmdOpts.document,
+        phone: cmdOpts.phone,
+        personType: parsePersonType(cmdOpts.personType),
+        zipCode: cmdOpts.zipCode,
+        street: cmdOpts.street,
+        number: cmdOpts.number,
+        complement: cmdOpts.complement,
+        neighborhood: cmdOpts.neighborhood,
+        city: cmdOpts.city,
+        state: cmdOpts.state
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  customers
+    .command('list')
+    .description('List customers with pagination and search')
+    .option('--page <n>', 'page number (1-based)', (v: string) => parseInt(v, 10))
+    .option('--limit <n>', 'items per page (1-100)', (v: string) => parseInt(v, 10))
+    .option('--search <query>', 'search by name, email, or document')
+    .option(
+      '--status <status>',
+      "'overdue' returns customers with at least one overdue scheduled charge"
+    )
+    .action(
+      async (cmdOpts: { page?: number; limit?: number; search?: string; status?: string }) => {
+        const base = toCommandOptions(program);
+        await customersListCommand({
+          ...base,
+          page: cmdOpts.page,
+          limit: cmdOpts.limit,
+          search: cmdOpts.search,
+          status: cmdOpts.status === 'overdue' ? 'overdue' : undefined
+        }).catch((err) => printErrorAndExit(err, base));
+      }
+    );
+
+  customers
+    .command('get <uuid>')
+    .description('Fetch a single customer by uuid')
+    .action(async (uuid: string) => {
+      const base = toCommandOptions(program);
+      await customersGetCommand({ ...base, uuid }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  customers
+    .command('update <uuid>')
+    .description('Partially update a customer (only the flags you pass change)')
+    .option('--name <name>', 'customer name')
+    .option('--email <email>', 'customer email')
+    .option('--phone <phone>', 'phone with area code, 10-11 digits')
+    .option('--document <document>', 'CPF (11 digits) or CNPJ (14 digits), digits only')
+    .option('--person-type <type>', "'fisica' or 'juridica'")
+    .option('--zip-code <cep>', 'ZIP code, 8 digits')
+    .option('--street <street>', 'street address')
+    .option('--number <number>', 'address number')
+    .option('--complement <text>', 'address complement')
+    .option('--neighborhood <text>', 'neighborhood')
+    .option('--city <city>', 'city')
+    .option('--state <uf>', '2-letter state code, e.g. SP')
+    .action(async (uuid: string, cmdOpts) => {
+      const base = toCommandOptions(program);
+      await customersUpdateCommand({
+        ...base,
+        uuid,
+        name: cmdOpts.name,
+        email: cmdOpts.email,
+        phone: cmdOpts.phone,
+        document: cmdOpts.document,
+        personType: cmdOpts.personType ? parsePersonType(cmdOpts.personType) : undefined,
+        zipCode: cmdOpts.zipCode,
+        street: cmdOpts.street,
+        number: cmdOpts.number,
+        complement: cmdOpts.complement,
+        neighborhood: cmdOpts.neighborhood,
+        city: cmdOpts.city,
+        state: cmdOpts.state
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  customers
+    .command('set-billing-email <uuid>')
+    .description('Set the sticky per-seller billing-email override')
+    .requiredOption('--email <email>', 'the billing email to set')
+    .action(async (uuid: string, cmdOpts: { email: string }) => {
+      const base = toCommandOptions(program);
+      await customersSetBillingEmailOverrideCommand({
+        ...base,
+        uuid,
+        billingEmailOverride: cmdOpts.email
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  customers
+    .command('clear-billing-email <uuid>')
+    .description('Clear the billing-email override, falling back to the last-used email')
+    .action(async (uuid: string) => {
+      const base = toCommandOptions(program);
+      await customersSetBillingEmailOverrideCommand({
+        ...base,
+        uuid,
+        billingEmailOverride: null
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  customers
+    .command('delete <uuid>')
+    .description('Remove a customer from the current seller (unlinks your profile only)')
+    .action(async (uuid: string) => {
+      const base = toCommandOptions(program);
+      await customersDeleteCommand({ ...base, uuid }).catch((err) => printErrorAndExit(err, base));
     });
 
   // installment-plans

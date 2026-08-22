@@ -3,6 +3,21 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.10.0] — 2026-08-22
+
+### Added
+
+- **`garu customers` — manage your customer base.** `create`, `list`, `get`,
+  `update`, `set-billing-email`, `clear-billing-email`, `delete`. Backed by
+  the new `/api/v1/customers`, keyed on `uuid`.
+
+### Changed
+
+- **`@garuhq/node` bumped to `2.0.0`.** Breaking for `garu.customers.*` (see
+  that package's changelog); does not affect any other `garu-cli` command —
+  `customers` is a new command group in this release, so nothing here
+  changes behavior.
+
 ## [0.9.0] — 2026-08-21
 
 ### Added
@@ -42,7 +57,7 @@ All notable changes to `@garuhq/cli` are documented in this file. Format:
     `.expiresAt` (was `.date` / `.deadline`), and a new `charge.chargedTotal`
     field (what was actually charged, vs. `.amount`, the product's base
     price). `charges list`'s response shape is now `{ data, count, totalCount,
-    totalPages }` (was `{ data, meta }`).
+totalPages }` (was `{ data, meta }`).
 
 ## [0.8.0] — 2026-07-18
 

@@ -12,6 +12,7 @@ import {
   parseNonNegativeBrl,
   parseNonNegativeInt,
   parsePaymentMethod,
+  parsePersonType,
   parsePositiveIntId,
   parseRecurrenceInterval,
   parseRefundRequestStatus,
@@ -35,6 +36,16 @@ describe('parsePositiveIntId', () => {
 
   it.each(['0', '-1', 'abc', ''])('rejects %s as a CliError', (raw) => {
     expect(() => parsePositiveIntId(raw, 'Charge ID')).toThrow(CliError);
+  });
+});
+
+describe('parsePersonType', () => {
+  it.each(['fisica', 'juridica'] as const)('accepts %s', (type) => {
+    expect(parsePersonType(type)).toBe(type);
+  });
+
+  it('rejects an unknown person type with a CliError', () => {
+    expect(() => parsePersonType('empresa')).toThrow(CliError);
   });
 });
 

@@ -402,6 +402,43 @@ garu refund-requests reject a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
 
 ---
 
+### `garu customers create`
+
+Register a customer for the current seller. Registering the same `document`
+twice attaches your profile to the existing global customer instead of
+erroring — safe to call once per seller per person.
+
+```bash
+garu customers create \
+  --name "Maria Silva" --email maria@exemplo.com.br \
+  --document 12345678909 --phone 11987654321 \
+  --person-type fisica
+```
+
+| Flag                    | Description                                    |
+| ----------------------- | ---------------------------------------------- |
+| `--name <name>`         | Customer name (required)                       |
+| `--email <email>`       | Customer email (required)                      |
+| `--document <document>` | CPF (11 digits) or CNPJ (14 digits) (required) |
+| `--phone <phone>`       | Phone with area code, 10-11 digits (required)  |
+| `--person-type <type>`  | `fisica` or `juridica` (required)              |
+| `--zip-code <cep>` etc. | Address fields (all optional)                  |
+
+---
+
+### `garu customers` — other subcommands
+
+| Command                                    | Description                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------- |
+| `list [--page --limit --search --status]`  | List customers (`--status overdue` filters to at-risk customers) |
+| `get <uuid>`                               | Fetch a single customer                                          |
+| `update <uuid> [...]`                      | Partial update — same flags as `create`, all optional            |
+| `set-billing-email <uuid> --email <email>` | Set the sticky per-seller billing-email override                 |
+| `clear-billing-email <uuid>`               | Clear the override, falling back to the last-used email          |
+| `delete <uuid>`                            | Unlink the customer from the current seller                      |
+
+---
+
 ### `garu doctor`
 
 Run environment diagnostics. Verifies your CLI version, API connectivity, credentials, and detects AI agent integrations.

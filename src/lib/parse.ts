@@ -45,6 +45,17 @@ export function toChargePaymentMethod(type: ChargeCreateType): ChargePaymentMeth
   return type === 'credit_card' ? 'creditCard' : type;
 }
 
+/** `customers create`/`update --person-type`. Matches the SDK's inline literal union. */
+export type PersonType = 'fisica' | 'juridica';
+
+export function parsePersonType(raw: string): PersonType {
+  if (raw === 'fisica' || raw === 'juridica') return raw;
+  throw new CliError(
+    'invalid_input',
+    `--person-type must be 'fisica' or 'juridica' (got '${raw}')`
+  );
+}
+
 /** Parse `--payment-method` on `charges list`, same spelling as `--type`. */
 export function parseChargePaymentMethodFilter(raw: string): ChargePaymentMethod {
   return toChargePaymentMethod(parsePaymentMethod(raw));
