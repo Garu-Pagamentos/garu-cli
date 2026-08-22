@@ -3,6 +3,20 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.12.0] — 2026-08-22
+
+### Changed
+
+- **`garu scheduled-charges` now targets `/api/v1/scheduled-charges`.**
+  `list`/`attempts` pretty-print output reports `count`/`totalCount`/
+  `totalPages` instead of a `page`/`total` counter. No command flags or
+  arguments changed — scheduled-charge ids were already opaque strings
+  (`sch_...`), so this is a wire-level move, not an identifier change.
+- **`@garuhq/node` bumped to `4.0.0`.** Breaking for
+  `garu.scheduledCharges.list()`/`.listAttempts()` (see that package's
+  changelog); `garu-cli`'s own commands are unaffected beyond the
+  pretty-print header above.
+
 ## [0.11.0] — 2026-08-22
 
 ### Changed

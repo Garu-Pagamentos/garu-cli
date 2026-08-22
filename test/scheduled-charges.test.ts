@@ -39,7 +39,11 @@ const fakeRecord: ScheduledChargeRecord = {
   type: 'one_time',
   dueDate: '2026-06-15',
   methods: ['pix', 'boleto'],
+  recurrence: null,
   status: 'scheduled',
+  subscriptionId: null,
+  trialEndsAt: null,
+  cancelAtPeriodEnd: false,
   externalReference: null,
   maxRecoveryDays: null,
   metadata: null,
@@ -68,7 +72,9 @@ function makeFakeGaru(overrides: Record<string, unknown> = {}) {
       create: vi.fn().mockResolvedValue(fakeRecord),
       list: vi.fn().mockResolvedValue({
         data: [fakeRecord],
-        meta: { page: 1, limit: 50, total: 1, totalPages: 1 }
+        count: 1,
+        totalCount: 1,
+        totalPages: 1
       }),
       get: vi.fn().mockResolvedValue(fakeDetail),
       postpone: vi.fn().mockResolvedValue({ ...fakeRecord, dueDate: '2026-07-01' }),
@@ -81,7 +87,9 @@ function makeFakeGaru(overrides: Record<string, unknown> = {}) {
       clearPaymentMethod: vi.fn().mockResolvedValue(fakeRecord),
       listAttempts: vi.fn().mockResolvedValue({
         data: [],
-        meta: { page: 1, limit: 50, total: 0, totalPages: 0 }
+        count: 0,
+        totalCount: 0,
+        totalPages: 0
       }),
       chargeNow: vi.fn(),
       ...overrides

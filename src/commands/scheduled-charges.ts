@@ -338,10 +338,8 @@ function prettyScheduledCharge(c: ScheduledChargeRecord): string {
 }
 
 function prettyScheduledChargeList(list: ScheduledChargeList): string {
-  if (list.data.length === 0) {
-    return `No scheduled charges found (page ${list.meta.page}/${list.meta.totalPages || 1})`;
-  }
-  const header = `Scheduled charges (page ${list.meta.page}/${list.meta.totalPages || '?'}, ${list.meta.total} total)`;
+  if (list.data.length === 0) return 'No scheduled charges found';
+  const header = `Scheduled charges (${list.count} of ${list.totalCount} total, ${list.totalPages} page(s))`;
   const rows = list.data.map(
     (c) =>
       `  ${c.id.padEnd(20)}  ${String(c.status).padEnd(18)}  ${String(c.type).padEnd(9)}  ${String(c.amount).padStart(10)}  ${c.dueDate}`
@@ -367,10 +365,8 @@ function prettyScheduledChargeDetail(detail: ScheduledChargeDetail): string {
 }
 
 function prettyAttemptList(list: ScheduledChargeAttemptList): string {
-  if (list.data.length === 0) {
-    return `No billing attempts found (page ${list.meta.page}/${list.meta.totalPages || 1})`;
-  }
-  const header = `Billing attempts (page ${list.meta.page}/${list.meta.totalPages || '?'}, ${list.meta.total} total)`;
+  if (list.data.length === 0) return 'No billing attempts found';
+  const header = `Billing attempts (${list.count} of ${list.totalCount} total, ${list.totalPages} page(s))`;
   const rows = list.data.map(
     (a) =>
       `  cycle ${String(a.cycleNumber).padStart(3)}  #${a.attemptNumber}  ${a.status.padEnd(10)}  ${a.paymentMethod.padEnd(7)}  ${a.failureCode ?? ''}  ${a.attemptedAt}`
