@@ -3,6 +3,47 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.9.0] — 2026-08-21
+
+### Added
+
+- **`garu installment-plans` — boleto parcelado (carnê).** Sell a product as
+  2–12 monthly bank slips: `create`, `list`, `get`, `reissue`, `postpone`,
+  `mark-paid`, `cancel`, `request-refund`.
+- **`garu refund-requests` — refunds Garu cannot make for you.** A boleto
+  cannot be reversed and Celcoin exposes no Pix devolução, so this records the
+  request and waits for you to confirm the transfer: `list`, `get`, `confirm`,
+  `reject`.
+
+### Changed
+
+- **`@garuhq/node` bumped to `1.1.0`.**
+
+### Breaking
+
+- **`charges` commands now use the versioned `/api/v1/charges` API**, via
+  `@garuhq/node@1.0.0`+.
+  - `garu charges get <id>` and `garu charges refund <id>` now take the
+    charge's **uuid**, not the old numeric id.
+  - `garu charges refund --amount` is now **decimal BRL / reais** (e.g.
+    `10.00`), not centavos. The `--idempotency-key` flag on `refund` is
+    removed — the v1 refund route doesn't take one.
+  - `garu charges create --type credit_card` keeps its flag spelling; the
+    underlying SDK call now sends `creditCard` and a `card` object (was
+    `cardInfo`) — no CLI-facing change beyond the `--card-*` flags already in
+    use.
+  - `garu charges list --payment-method` now takes `credit_card` (was
+    `creditcard`, undocumented and unvalidated); `--status` is validated
+    against the new friendly status set (`pending`, `authorized`, `paid`,
+    `failed`, `expired`, `canceled`, `refund_pending`, `refunded`,
+    `chargeback`).
+  - `garu charges get`/`list` output: `charge.uuid` (was `.id`),
+    `charge.paymentMethod` (was `.paymentMethodId`), `charge.createdAt` /
+    `.expiresAt` (was `.date` / `.deadline`), and a new `charge.chargedTotal`
+    field (what was actually charged, vs. `.amount`, the product's base
+    price). `charges list`'s response shape is now `{ data, count, totalCount,
+    totalPages }` (was `{ data, meta }`).
+
 ## [0.8.0] — 2026-07-18
 
 ### Changed

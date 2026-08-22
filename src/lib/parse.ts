@@ -1,6 +1,9 @@
 import type {
-  PaymentMethod,
+  ChargePaymentMethod,
+  ChargeStatus,
+  InstallmentPlanStatus,
   RecurrenceInterval,
+  RefundRequestStatus,
   ScheduledChargeStatus,
   ScheduledChargeType,
   ScheduledPaymentMethod,
@@ -22,11 +25,75 @@ export function parsePositiveIntId(raw: string, label: string): number {
   return id;
 }
 
-export function parsePaymentMethod(raw: string): PaymentMethod {
+/**
+ * CLI-facing charge creation method. Kept as its own literal union (not the SDK's
+ * `ChargePaymentMethod`) so the `--type credit_card` flag spelling stays stable
+ * across SDK versions — {@link toChargePaymentMethod} maps it at the call site.
+ */
+export type ChargeCreateType = 'pix' | 'credit_card' | 'boleto';
+
+export function parsePaymentMethod(raw: string): ChargeCreateType {
   if (raw === 'pix' || raw === 'credit_card' || raw === 'boleto') return raw;
   throw new CliError(
     'invalid_input',
     `--type must be 'pix', 'credit_card', or 'boleto' (got '${raw}')`
+  );
+}
+
+/** Map the CLI's `credit_card` spelling to the SDK's `creditCard`. */
+export function toChargePaymentMethod(type: ChargeCreateType): ChargePaymentMethod {
+  return type === 'credit_card' ? 'creditCard' : type;
+}
+
+/** Parse `--payment-method` on `charges list`, same spelling as `--type`. */
+export function parseChargePaymentMethodFilter(raw: string): ChargePaymentMethod {
+  return toChargePaymentMethod(parsePaymentMethod(raw));
+}
+
+const CHARGE_STATUSES: ChargeStatus[] = [
+  'pending',
+  'authorized',
+  'paid',
+  'failed',
+  'expired',
+  'canceled',
+  'refund_pending',
+  'refunded',
+  'chargeback'
+];
+
+export function parseChargeStatus(raw: string): ChargeStatus {
+  if ((CHARGE_STATUSES as string[]).includes(raw)) return raw as ChargeStatus;
+  throw new CliError(
+    'invalid_input',
+    `--status must be one of ${CHARGE_STATUSES.join(', ')} (got '${raw}')`
+  );
+}
+
+const INSTALLMENT_PLAN_STATUSES: InstallmentPlanStatus[] = [
+  'pending_activation',
+  'active',
+  'completed',
+  'defaulted',
+  'canceled',
+  'refunded'
+];
+
+export function parseInstallmentPlanStatus(raw: string): InstallmentPlanStatus {
+  if ((INSTALLMENT_PLAN_STATUSES as string[]).includes(raw)) return raw as InstallmentPlanStatus;
+  throw new CliError(
+    'invalid_input',
+    `--status must be one of ${INSTALLMENT_PLAN_STATUSES.join(', ')} (got '${raw}')`
+  );
+}
+
+const REFUND_REQUEST_STATUSES: RefundRequestStatus[] = ['pending', 'confirmed', 'rejected'];
+
+export function parseRefundRequestStatus(raw: string): RefundRequestStatus {
+  if ((REFUND_REQUEST_STATUSES as string[]).includes(raw)) return raw as RefundRequestStatus;
+  throw new CliError(
+    'invalid_input',
+    `--status must be one of ${REFUND_REQUEST_STATUSES.join(', ')} (got '${raw}')`
   );
 }
 

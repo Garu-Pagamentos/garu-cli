@@ -9,9 +9,25 @@ import {
   chargesRefundCommand
 } from './commands/charges.js';
 import { doctorCommand } from './commands/doctor.js';
+import {
+  installmentPlansCancelCommand,
+  installmentPlansCreateCommand,
+  installmentPlansGetCommand,
+  installmentPlansListCommand,
+  installmentPlansMarkPaidCommand,
+  installmentPlansPostponeCommand,
+  installmentPlansReissueCommand,
+  installmentPlansRequestRefundCommand
+} from './commands/installment-plans.js';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
 import { productsCreateCommand, productsUpdateCommand } from './commands/products.js';
+import {
+  refundRequestsConfirmCommand,
+  refundRequestsGetCommand,
+  refundRequestsListCommand,
+  refundRequestsRejectCommand
+} from './commands/refund-requests.js';
 import {
   scheduledChargesAttemptsCommand,
   scheduledChargesCancelAtPeriodEndCommand,
@@ -35,13 +51,17 @@ import {
 } from './commands/webhooks.js';
 import {
   parseAmountBrl,
+  parseChargePaymentMethodFilter,
+  parseChargeStatus,
   parseCsvList,
+  parseInstallmentPlanStatus,
   parseIntInRange,
   parseMetadata,
   parseNonNegativeBrl,
   parsePaymentMethod,
   parsePositiveIntId,
   parseRecurrenceInterval,
+  parseRefundRequestStatus,
   parseScheduledChargeStatus,
   parseScheduledChargeType,
   parseScheduledPaymentMethods,
@@ -149,9 +169,12 @@ Recipes:
     .description('List charges with pagination and filters')
     .option('--page <n>', 'page number (1-based)', (v: string) => parseInt(v, 10))
     .option('--limit <n>', 'items per page (1-100)', (v: string) => parseInt(v, 10))
-    .option('--status <status>', 'filter by status (e.g. paid, pending)')
+    .option(
+      '--status <status>',
+      'filter by status: pending, authorized, paid, failed, expired, canceled, refund_pending, refunded, chargeback'
+    )
     .option('--search <query>', 'search by customer name, email, or document')
-    .option('--payment-method <method>', 'filter: pix, creditcard, boleto')
+    .option('--payment-method <method>', 'filter: pix, credit_card, boleto')
     .action(
       async (cmdOpts: {
         page?: number;
@@ -165,9 +188,11 @@ Recipes:
           ...base,
           page: cmdOpts.page,
           limit: cmdOpts.limit,
-          status: cmdOpts.status,
+          status: cmdOpts.status ? parseChargeStatus(cmdOpts.status) : undefined,
           search: cmdOpts.search,
           paymentMethod: cmdOpts.paymentMethod
+            ? parseChargePaymentMethodFilter(cmdOpts.paymentMethod)
+            : undefined
         }).catch((err) => printErrorAndExit(err, base));
       }
     );
@@ -213,28 +238,26 @@ Recipes:
 
   charges
     .command('get <id>')
-    .description('Fetch a single charge by ID')
+    .description('Fetch a single charge by its uuid')
     .action(async (id: string) => {
       const base = toCommandOptions(program);
-      await chargesGetCommand({ ...base, id: parsePositiveIntId(id, 'Charge ID') }).catch((err) =>
-        printErrorAndExit(err, base)
-      );
+      await chargesGetCommand({ ...base, id }).catch((err) => printErrorAndExit(err, base));
     });
 
   charges
     .command('refund <id>')
-    .description('Refund a charge (full or partial)')
-    .option('--amount <centavos>', 'partial refund amount in centavos', (v) => parseInt(v, 10))
+    .description('Refund a charge by its uuid (full or partial)')
+    .option('--amount <reais>', 'partial refund amount in decimal BRL, e.g. 10.00', (v) =>
+      parseNonNegativeBrl(v, '--amount')
+    )
     .option('--reason <text>', 'optional refund reason')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
     .action(async (id: string, cmdOpts) => {
       const base = toCommandOptions(program);
       await chargesRefundCommand({
         ...base,
-        id: parsePositiveIntId(id, 'Charge ID'),
+        id,
         amount: cmdOpts.amount,
-        reason: cmdOpts.reason,
-        idempotencyKey: cmdOpts.idempotencyKey
+        reason: cmdOpts.reason
       }).catch((err) => printErrorAndExit(err, base));
     });
 
@@ -576,6 +599,232 @@ Recipes:
         ...base,
         id: parsePositiveIntId(id, 'Webhook event ID')
       }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  // installment-plans
+  const installmentPlans = program
+    .command('installment-plans')
+    .description('Sell a product as boleto parcelado (carnê) and manage its installments');
+
+  installmentPlans
+    .command('create')
+    .description('Sell a product as a carnê (installments of boleto slips)')
+    .requiredOption('--product-id <uuid>', 'product uuid (must have boleto parcelado enabled)')
+    .requiredOption('--customer-id <n>', 'customer id', (v: string) =>
+      parsePositiveIntId(v, '--customer-id')
+    )
+    .requiredOption('--installments <n>', '2-12 installments', (v: string) =>
+      parseIntInRange(v, '--installments', 2, 12)
+    )
+    .option('--first-due-date <yyyy-mm-dd>', 'first installment due date (default: today)')
+    .option(
+      '--affiliate-id <n>',
+      'attribute the sale to this affiliate (fixed for the whole plan)',
+      (v: string) => parsePositiveIntId(v, '--affiliate-id')
+    )
+    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .action(async (cmdOpts) => {
+      const base = toCommandOptions(program);
+      await installmentPlansCreateCommand({
+        ...base,
+        productId: cmdOpts.productId,
+        customerId: cmdOpts.customerId,
+        installments: cmdOpts.installments,
+        firstDueDate: cmdOpts.firstDueDate,
+        affiliateId: cmdOpts.affiliateId,
+        idempotencyKey: cmdOpts.idempotencyKey
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  installmentPlans
+    .command('list')
+    .description('List installment plans (carnês) with pagination and filters')
+    .option('--page <n>', 'page number (1-based)', (v: string) => parseInt(v, 10))
+    .option('--limit <n>', 'items per page (1-100)', (v: string) => parseInt(v, 10))
+    .option('--customer-id <n>', 'filter by customer id', (v: string) =>
+      parsePositiveIntId(v, '--customer-id')
+    )
+    .option('--product-id <uuid>', 'filter by product uuid')
+    .option(
+      '--status <status>',
+      'filter by status (repeatable)',
+      (val: string, acc: string[]) => acc.concat(val),
+      [] as string[]
+    )
+    .option('--due-from <yyyy-mm-dd>', 'lower bound for the first installment due date')
+    .option('--due-to <yyyy-mm-dd>', 'upper bound for the first installment due date')
+    .action(
+      async (cmdOpts: {
+        page?: number;
+        limit?: number;
+        customerId?: number;
+        productId?: string;
+        status: string[];
+        dueFrom?: string;
+        dueTo?: string;
+      }) => {
+        const base = toCommandOptions(program);
+        await installmentPlansListCommand({
+          ...base,
+          page: cmdOpts.page,
+          limit: cmdOpts.limit,
+          customerId: cmdOpts.customerId,
+          productId: cmdOpts.productId,
+          status:
+            cmdOpts.status.length > 0 ? cmdOpts.status.map(parseInstallmentPlanStatus) : undefined,
+          dueFrom: cmdOpts.dueFrom,
+          dueTo: cmdOpts.dueTo
+        }).catch((err) => printErrorAndExit(err, base));
+      }
+    );
+
+  installmentPlans
+    .command('get <uuid>')
+    .description('Fetch a carnê with every installment: due date, status, barcode and PDF')
+    .action(async (uuid: string) => {
+      const base = toCommandOptions(program);
+      await installmentPlansGetCommand({ ...base, uuid }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
+    });
+
+  installmentPlans
+    .command('reissue <uuid> <number>')
+    .description('Issue a segunda via for one installment once its slip has expired')
+    .action(async (uuid: string, number: string) => {
+      const base = toCommandOptions(program);
+      await installmentPlansReissueCommand({
+        ...base,
+        uuid,
+        number: parsePositiveIntId(number, 'installment number')
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  installmentPlans
+    .command('postpone <uuid> <number>')
+    .description('Move one installment to a later due date (its siblings keep theirs)')
+    .requiredOption('--new-due-date <yyyy-mm-dd>', 'new due date for this installment')
+    .action(async (uuid: string, number: string, cmdOpts: { newDueDate: string }) => {
+      const base = toCommandOptions(program);
+      await installmentPlansPostponeCommand({
+        ...base,
+        uuid,
+        number: parsePositiveIntId(number, 'installment number'),
+        newDueDate: cmdOpts.newDueDate
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  installmentPlans
+    .command('mark-paid <uuid> <number>')
+    .description('Record an installment as paid when the buyer paid but the webhook never arrived')
+    .action(async (uuid: string, number: string) => {
+      const base = toCommandOptions(program);
+      await installmentPlansMarkPaidCommand({
+        ...base,
+        uuid,
+        number: parsePositiveIntId(number, 'installment number')
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  installmentPlans
+    .command('cancel <uuid>')
+    .description('Cancel a carnê — stops emission/reminders and cancels open provider slips')
+    .option('--note <text>', 'optional note recorded on the plan')
+    .action(async (uuid: string, cmdOpts: { note?: string }) => {
+      const base = toCommandOptions(program);
+      await installmentPlansCancelCommand({ ...base, uuid, note: cmdOpts.note }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
+    });
+
+  installmentPlans
+    .command('request-refund <uuid>')
+    .description(
+      'Ask for a carnê to be refunded (Garu records the request; transfer the money yourself, then confirm with `garu refund-requests confirm`)'
+    )
+    .option('--amount <reais>', 'defaults to everything the carnê has collected', (v: string) =>
+      parseNonNegativeBrl(v, '--amount')
+    )
+    .option('--reason <text>', 'optional reason')
+    .action(async (uuid: string, cmdOpts: { amount?: number; reason?: string }) => {
+      const base = toCommandOptions(program);
+      await installmentPlansRequestRefundCommand({
+        ...base,
+        uuid,
+        amount: cmdOpts.amount,
+        reason: cmdOpts.reason
+      }).catch((err) => printErrorAndExit(err, base));
+    });
+
+  // refund-requests
+  const refundRequests = program
+    .command('refund-requests')
+    .description('Inspect and resolve refund requests (carnê and Pix/boleto)');
+
+  refundRequests
+    .command('list')
+    .description('List refund requests with pagination and filters')
+    .option('--page <n>', 'page number (1-based)', (v: string) => parseInt(v, 10))
+    .option('--limit <n>', 'items per page (1-100)', (v: string) => parseInt(v, 10))
+    .option('--plan-id <uuid>', 'filter by carnê uuid')
+    .option('--charge-id <uuid>', 'filter by charge uuid (Pix/boleto)')
+    .option(
+      '--status <status>',
+      'filter by status (repeatable): pending, confirmed, rejected',
+      (val: string, acc: string[]) => acc.concat(val),
+      [] as string[]
+    )
+    .action(
+      async (cmdOpts: {
+        page?: number;
+        limit?: number;
+        planId?: string;
+        chargeId?: string;
+        status: string[];
+      }) => {
+        const base = toCommandOptions(program);
+        await refundRequestsListCommand({
+          ...base,
+          page: cmdOpts.page,
+          limit: cmdOpts.limit,
+          planId: cmdOpts.planId,
+          chargeId: cmdOpts.chargeId,
+          status:
+            cmdOpts.status.length > 0 ? cmdOpts.status.map(parseRefundRequestStatus) : undefined
+        }).catch((err) => printErrorAndExit(err, base));
+      }
+    );
+
+  refundRequests
+    .command('get <uuid>')
+    .description('Fetch a single refund request')
+    .action(async (uuid: string) => {
+      const base = toCommandOptions(program);
+      await refundRequestsGetCommand({ ...base, uuid }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
+    });
+
+  refundRequests
+    .command('confirm <uuid>')
+    .description('Record that you transferred the money back — call this AFTER the transfer')
+    .option('--note <text>', 'optional note, e.g. a bank reference')
+    .action(async (uuid: string, cmdOpts: { note?: string }) => {
+      const base = toCommandOptions(program);
+      await refundRequestsConfirmCommand({ ...base, uuid, note: cmdOpts.note }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
+    });
+
+  refundRequests
+    .command('reject <uuid>')
+    .description('Decline the request — the carnê or charge is left untouched')
+    .option('--note <text>', 'optional note explaining the rejection')
+    .action(async (uuid: string, cmdOpts: { note?: string }) => {
+      const base = toCommandOptions(program);
+      await refundRequestsRejectCommand({ ...base, uuid, note: cmdOpts.note }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
     });
 
   // products

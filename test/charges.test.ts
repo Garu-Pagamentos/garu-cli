@@ -19,19 +19,36 @@ afterEach(() => {
   stdoutSpy.mockRestore();
 });
 
+const fakeChargeUuid = '6f1c9b2e-4a7d-4f0b-9a3e-1d2c3b4a5e6f';
+
 function makeFakeGaru(
-  overrides: Partial<{ create: unknown; get: unknown; refund: unknown; list: unknown }> = {}
+  overrides: Partial<{ create: unknown; retrieve: unknown; refund: unknown; list: unknown }> = {}
 ) {
   return {
     charges: {
-      create: overrides.create ?? vi.fn().mockResolvedValue({ id: 1, status: 'pending' }),
-      get: overrides.get ?? vi.fn().mockResolvedValue({ id: 2, status: 'paid' }),
-      refund: overrides.refund ?? vi.fn().mockResolvedValue({ id: 3, status: 'refunded' }),
+      create:
+        overrides.create ??
+        vi.fn().mockResolvedValue({ uuid: fakeChargeUuid, status: 'pending', amount: 100 }),
+      retrieve:
+        overrides.retrieve ??
+        vi.fn().mockResolvedValue({ uuid: fakeChargeUuid, status: 'paid', amount: 100 }),
+      refund:
+        overrides.refund ??
+        vi.fn().mockResolvedValue({ uuid: fakeChargeUuid, status: 'refunded', amount: 100 }),
       list:
         overrides.list ??
         vi.fn().mockResolvedValue({
-          data: [{ id: 1, status: 'paid', paymentMethodId: 'pix', date: '2026-01-01' }],
-          meta: { page: 1, limit: 20, total: 1, totalPages: 1 }
+          data: [
+            {
+              uuid: fakeChargeUuid,
+              status: 'paid',
+              paymentMethod: 'pix',
+              createdAt: '2026-01-01T00:00:00Z'
+            }
+          ],
+          count: 1,
+          totalCount: 1,
+          totalPages: 1
         })
     }
   };
@@ -55,12 +72,14 @@ describe('chargesCreateCommand', () => {
       ...fakeCustomer
     });
 
-    expect(charge.id).toBe(1);
+    expect(charge.uuid).toBe(fakeChargeUuid);
     expect((fake.charges.create as any).mock.calls[0][0]).toMatchObject({
       paymentMethod: 'pix',
       productId: 'prod-uuid'
     });
-    expect(stdoutSpy).toHaveBeenCalledWith('{"id":1,"status":"pending"}\n');
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      `{"uuid":"${fakeChargeUuid}","status":"pending","amount":100}\n`
+    );
   });
 
   it('requires all credit-card fields when --type=credit_card', async () => {
@@ -76,7 +95,7 @@ describe('chargesCreateCommand', () => {
     ).rejects.toBeInstanceOf(CliError);
   });
 
-  it('forwards card info when --type=credit_card with all flags', async () => {
+  it('forwards card info when --type=credit_card with all flags, mapped to the SDK shape', async () => {
     const fake = makeFakeGaru();
     await chargesCreateCommand({
       garu: fake as any,
@@ -92,8 +111,9 @@ describe('chargesCreateCommand', () => {
     });
 
     const call = (fake.charges.create as any).mock.calls[0][0];
-    expect(call.cardInfo).toEqual({
-      cardNumber: '4111111111111111',
+    expect(call.paymentMethod).toBe('creditCard');
+    expect(call.card).toEqual({
+      number: '4111111111111111',
       cvv: '123',
       expirationDate: '2030-12',
       holderName: 'MARIA SILVA',
@@ -103,30 +123,30 @@ describe('chargesCreateCommand', () => {
 });
 
 describe('chargesGetCommand', () => {
-  it('calls garu.charges.get with the parsed id', async () => {
+  it('calls garu.charges.retrieve with the uuid', async () => {
     const fake = makeFakeGaru();
     await chargesGetCommand({
       garu: fake as any,
       mode: 'json',
-      id: 42
+      id: fakeChargeUuid
     });
-    expect((fake.charges.get as any).mock.calls[0][0]).toBe(42);
+    expect((fake.charges.retrieve as any).mock.calls[0][0]).toBe(fakeChargeUuid);
   });
 });
 
 describe('chargesRefundCommand', () => {
-  it('passes amount and reason through', async () => {
+  it('passes amount (reais) and reason through', async () => {
     const fake = makeFakeGaru();
     await chargesRefundCommand({
       garu: fake as any,
       mode: 'json',
-      id: 7,
-      amount: 1000,
+      id: fakeChargeUuid,
+      amount: 10.0,
       reason: 'customer_request'
     });
     const call = (fake.charges.refund as any).mock.calls[0];
-    expect(call[0]).toBe(7);
-    expect(call[1]).toEqual({ amount: 1000, reason: 'customer_request' });
+    expect(call[0]).toBe(fakeChargeUuid);
+    expect(call[1]).toEqual({ amount: 10.0, reason: 'customer_request' });
   });
 
   it('passes an empty params object for a full refund', async () => {
@@ -134,7 +154,7 @@ describe('chargesRefundCommand', () => {
     await chargesRefundCommand({
       garu: fake as any,
       mode: 'json',
-      id: 7
+      id: fakeChargeUuid
     });
     expect((fake.charges.refund as any).mock.calls[0][1]).toEqual({});
   });
@@ -156,7 +176,7 @@ describe('chargesListCommand', () => {
       limit: 10,
       status: 'paid'
     });
-    expect(result.meta.page).toBe(1);
+    expect(result.totalCount).toBe(1);
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
@@ -199,10 +219,7 @@ describe('chargesListCommand', () => {
 
   it('shows empty message when no charges found', async () => {
     const fake = makeFakeGaru({
-      list: vi.fn().mockResolvedValue({
-        data: [],
-        meta: { page: 1, limit: 20, total: 0, totalPages: 0 }
-      })
+      list: vi.fn().mockResolvedValue({ data: [], count: 0, totalCount: 0, totalPages: 0 })
     });
     await chargesListCommand({
       garu: fake as any,

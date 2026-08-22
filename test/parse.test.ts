@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { CliError } from '../src/lib/errors.js';
 import {
   parseAmountBrl,
+  parseChargePaymentMethodFilter,
+  parseChargeStatus,
   parseCsvList,
+  parseInstallmentPlanStatus,
   parseIntInRange,
   parseMetadata,
   parseNonNegativeBrl,
@@ -11,10 +14,12 @@ import {
   parsePaymentMethod,
   parsePositiveIntId,
   parseRecurrenceInterval,
+  parseRefundRequestStatus,
   parseScheduledChargeStatus,
   parseScheduledChargeType,
   parseScheduledPaymentMethods,
-  parseWebhookEventStatus
+  parseWebhookEventStatus,
+  toChargePaymentMethod
 } from '../src/lib/parse.js';
 
 describe('parsePositiveIntId', () => {
@@ -40,6 +45,77 @@ describe('parsePaymentMethod', () => {
 
   it('rejects an unknown payment method with a CliError', () => {
     expect(() => parsePaymentMethod('crypto')).toThrow(CliError);
+  });
+});
+
+describe('toChargePaymentMethod', () => {
+  it('maps credit_card to the SDK spelling creditCard', () => {
+    expect(toChargePaymentMethod('credit_card')).toBe('creditCard');
+  });
+
+  it.each(['pix', 'boleto'] as const)('leaves %s unchanged', (method) => {
+    expect(toChargePaymentMethod(method)).toBe(method);
+  });
+});
+
+describe('parseChargePaymentMethodFilter', () => {
+  it('maps credit_card to creditCard', () => {
+    expect(parseChargePaymentMethodFilter('credit_card')).toBe('creditCard');
+  });
+
+  it.each(['pix', 'boleto'] as const)('accepts %s unchanged', (method) => {
+    expect(parseChargePaymentMethodFilter(method)).toBe(method);
+  });
+
+  it('rejects an unknown payment method with a CliError', () => {
+    expect(() => parseChargePaymentMethodFilter('crypto')).toThrow(CliError);
+  });
+});
+
+describe('parseChargeStatus', () => {
+  it.each([
+    'pending',
+    'authorized',
+    'paid',
+    'failed',
+    'expired',
+    'canceled',
+    'refund_pending',
+    'refunded',
+    'chargeback'
+  ] as const)('accepts %s', (status) => {
+    expect(parseChargeStatus(status)).toBe(status);
+  });
+
+  it('rejects an unknown status with a CliError', () => {
+    expect(() => parseChargeStatus('delivered')).toThrow(CliError);
+  });
+});
+
+describe('parseInstallmentPlanStatus', () => {
+  it.each([
+    'pending_activation',
+    'active',
+    'completed',
+    'defaulted',
+    'canceled',
+    'refunded'
+  ] as const)('accepts %s', (status) => {
+    expect(parseInstallmentPlanStatus(status)).toBe(status);
+  });
+
+  it('rejects an unknown status with a CliError', () => {
+    expect(() => parseInstallmentPlanStatus('overdue')).toThrow(CliError);
+  });
+});
+
+describe('parseRefundRequestStatus', () => {
+  it.each(['pending', 'confirmed', 'rejected'] as const)('accepts %s', (status) => {
+    expect(parseRefundRequestStatus(status)).toBe(status);
+  });
+
+  it('rejects an unknown status with a CliError', () => {
+    expect(() => parseRefundRequestStatus('approved')).toThrow(CliError);
   });
 });
 

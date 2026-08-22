@@ -156,13 +156,13 @@ garu charges list --status paid --limit 50
 garu charges list --search "Maria" --payment-method pix
 ```
 
-| Flag                        | Description                                 |
-| --------------------------- | ------------------------------------------- |
-| `--page <n>`                | Page number (1-based)                       |
-| `--limit <n>`               | Items per page (1-100)                      |
-| `--status <status>`         | Filter by status (e.g. `paid`, `pending`)   |
-| `--search <query>`          | Search by customer name, email, or document |
-| `--payment-method <method>` | Filter: `pix`, `creditcard`, `boleto`       |
+| Flag                        | Description                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--page <n>`                | Page number (1-based)                                                                                                          |
+| `--limit <n>`               | Items per page (1-100)                                                                                                         |
+| `--status <status>`         | Filter by status: `pending`, `authorized`, `paid`, `failed`, `expired`, `canceled`, `refund_pending`, `refunded`, `chargeback` |
+| `--search <query>`          | Search by customer name, email, or document                                                                                    |
+| `--payment-method <method>` | Filter: `pix`, `credit_card`, `boleto`                                                                                         |
 
 ---
 
@@ -211,32 +211,31 @@ garu charges create --type credit_card --product-id prod-uuid \
 
 ### `garu charges get`
 
-Fetch a single charge by ID.
+Fetch a single charge by its uuid.
 
 ```bash
-garu charges get 4472
-garu charges get 4472 --json | jq '.status'
+garu charges get 6f1c9b2e-4a7d-4f0b-9a3e-1d2c3b4a5e6f
+garu charges get 6f1c9b2e-4a7d-4f0b-9a3e-1d2c3b4a5e6f --json | jq '.status'
 ```
 
 ---
 
 ### `garu charges refund`
 
-Refund a charge (full or partial).
+Refund a charge by its uuid (full or partial).
 
 ```bash
 # Full refund
-garu charges refund 4472
+garu charges refund 6f1c9b2e-4a7d-4f0b-9a3e-1d2c3b4a5e6f
 
-# Partial refund (1000 centavos = R$10.00)
-garu charges refund 4472 --amount 1000 --reason "customer_request"
+# Partial refund, in decimal BRL / reais
+garu charges refund 6f1c9b2e-4a7d-4f0b-9a3e-1d2c3b4a5e6f --amount 10.00 --reason "customer_request"
 ```
 
-| Flag                      | Description                                       |
-| ------------------------- | ------------------------------------------------- |
-| `--amount <centavos>`     | Partial refund amount in centavos (omit for full) |
-| `--reason <text>`         | Optional refund reason                            |
-| `--idempotency-key <key>` | Idempotency key (auto-generated if omitted)       |
+| Flag               | Description                                                        |
+| ------------------ | ------------------------------------------------------------------ |
+| `--amount <reais>` | Partial refund amount in decimal BRL, e.g. `10.00` (omit for full) |
+| `--reason <text>`  | Optional refund reason                                             |
 
 ---
 
@@ -325,6 +324,81 @@ The process **exits non-zero** when:
 | `change-payment-method <id> --payment-method-id <n>`                         | Swap the saved card on a recurring series                                         |
 | `clear-payment-method <id>`                                                  | Clear the saved card (future cycles fall back to email-with-link)                 |
 | `attempts <id> [--page --limit --cycle-number]`                              | Per-attempt billing log                                                           |
+
+---
+
+### `garu installment-plans create`
+
+Sell a product as **boleto parcelado (carnê)** — a purchase split into 2–12
+monthly bank slips. This is seller-financed consumer credit: nobody guarantees
+a boleto, so Garu never advances funds and carries none of the default risk.
+Only the first slip is registered at creation; the rest are emitted month by
+month once parcela 1 compensates.
+
+```bash
+garu installment-plans create \
+  --product-id 40381e8e-6ee7-4b8e-9393-766a6e2109d2 \
+  --customer-id 4821 --installments 12
+
+# Attribute the sale to an affiliate (fixed for the whole carnê) and pick
+# the first due date
+garu installment-plans create \
+  --product-id 40381e8e-6ee7-4b8e-9393-766a6e2109d2 \
+  --customer-id 4821 --installments 6 \
+  --first-due-date 2026-10-05 --affiliate-id 5
+```
+
+| Flag                      | Description                                                     |
+| ------------------------- | --------------------------------------------------------------- |
+| `--product-id <uuid>`     | Product uuid (must have boleto parcelado enabled) — required    |
+| `--customer-id <n>`       | Customer id — required                                          |
+| `--installments <n>`      | 2–12 installments — required                                    |
+| `--first-due-date <date>` | First installment due date (default: today)                     |
+| `--affiliate-id <n>`      | Attribute the sale to this affiliate (fixed for the whole plan) |
+| `--idempotency-key <key>` | Idempotency key (auto-generated if omitted)                     |
+
+---
+
+### `garu installment-plans` — other subcommands
+
+| Command                                                         | Description                                                              |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `list [--page --limit --customer-id --product-id --status ...]` | List carnês (`--status` repeatable; `--due-from/--due-to`)               |
+| `get <uuid>`                                                    | Fetch a carnê with every installment: due date, status, barcode and PDF  |
+| `reissue <uuid> <number>`                                       | Issue a segunda via for one installment once its slip has expired        |
+| `postpone <uuid> <number> --new-due-date <date>`                | Move one installment to a later date (its siblings keep theirs)          |
+| `mark-paid <uuid> <number>`                                     | Record an installment as paid when the webhook never arrived             |
+| `cancel <uuid> [--note]`                                        | Cancel the carnê — stops emission/reminders, cancels open provider slips |
+| `request-refund <uuid> [--amount --reason]`                     | Ask for the carnê to be refunded (see `garu refund-requests` below)      |
+
+---
+
+### `garu refund-requests`
+
+Garu cannot reverse a boleto, and Celcoin exposes no Pix devolução, so a
+refund on either rail is a request-and-notify flow: you transfer the money
+back yourself, then tell Garu it happened. Card charges keep their automated
+reversal via `garu charges refund`.
+
+```bash
+# See everything you still owe a buyer
+garu refund-requests list --status pending
+
+# After you've transferred the money back
+garu refund-requests confirm a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  --note "Pix devolvido em 14/08, e2e E12345678"
+
+# Decline instead — the carnê or charge is left untouched
+garu refund-requests reject a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  --note "Produto entregue e retirado na loja"
+```
+
+| Command                                                | Description                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------ |
+| `list [--page --limit --status --plan-id --charge-id]` | List refund requests (`--status` repeatable)                 |
+| `get <uuid>`                                           | Fetch a single refund request                                |
+| `confirm <uuid> [--note]`                              | Record that you returned the money — call AFTER the transfer |
+| `reject <uuid> [--note]`                               | Decline the request — the carnê or charge is untouched       |
 
 ---
 
