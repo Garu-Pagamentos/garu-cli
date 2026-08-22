@@ -574,40 +574,37 @@ Recipes:
     );
 
   events
-    .command('get <id>')
-    .description('Fetch a single webhook event by ID')
-    .action(async (id: string) => {
+    .command('get <uuid>')
+    .description('Fetch a single webhook event by uuid')
+    .action(async (uuid: string) => {
       const base = toCommandOptions(program);
-      await webhooksEventsGetCommand({
-        ...base,
-        id: parsePositiveIntId(id, 'Webhook event ID')
-      }).catch((err) => printErrorAndExit(err, base));
+      await webhooksEventsGetCommand({ ...base, uuid }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
     });
 
   events
-    .command('retry <id>')
+    .command('retry <uuid>')
     .description(
       '[deprecated: prefer `resend`] Re-deliver a webhook event in place (resets the original row to pending and triggers an immediate attempt; destroys the prior failure record)'
     )
-    .action(async (id: string) => {
+    .action(async (uuid: string) => {
       const base = toCommandOptions(program);
-      await webhooksEventsRetryCommand({
-        ...base,
-        id: parsePositiveIntId(id, 'Webhook event ID')
-      }).catch((err) => printErrorAndExit(err, base));
+      await webhooksEventsRetryCommand({ ...base, uuid }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
     });
 
   events
-    .command('resend <id>')
+    .command('resend <uuid>')
     .description(
-      'Re-deliver a webhook event by cloning it (audit-trail preserving: original row is untouched, clone gets a new id and points back via manualResendOf)'
+      'Re-deliver a webhook event by cloning it (audit-trail preserving: original row is untouched, clone gets a new uuid and points back via manualResendOf)'
     )
-    .action(async (id: string) => {
+    .action(async (uuid: string) => {
       const base = toCommandOptions(program);
-      await webhooksEventsResendCommand({
-        ...base,
-        id: parsePositiveIntId(id, 'Webhook event ID')
-      }).catch((err) => printErrorAndExit(err, base));
+      await webhooksEventsResendCommand({ ...base, uuid }).catch((err) =>
+        printErrorAndExit(err, base)
+      );
     });
 
   // customers

@@ -3,6 +3,24 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.11.0] — 2026-08-22
+
+### Changed
+
+- **`garu webhooks events` now targets `/api/v1/webhook-events`, uuid-keyed.**
+  `get`, `retry`, and `resend` take a `<uuid>` positional argument instead of
+  a numeric id. `list` output now reports `count`/`totalCount`/`totalPages`
+  instead of a `page`/`total` counter, and every row/detail view prints the
+  event's `uuid`.
+- **`@garuhq/node` bumped to `3.0.0`.** Breaking for `garu.webhookEvents.*`
+  (see that package's changelog).
+
+### Breaking
+
+- `garu webhooks events get <id>` / `retry <id>` / `resend <id>` now expect
+  a `uuid`, not a numeric id. Run `garu webhooks events list` to read the
+  `uuid` of the event you want to act on.
+
 ## [0.10.0] — 2026-08-22
 
 ### Added

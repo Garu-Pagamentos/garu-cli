@@ -27,8 +27,9 @@ export type WebhooksEventsListOptions = WebhooksGlobalOptions & {
   endpointId?: number;
 };
 
-export type WebhooksEventsByIdOptions = WebhooksGlobalOptions & {
-  id: number;
+/** Webhook event IDs are public uuids. */
+export type WebhooksEventsByUuidOptions = WebhooksGlobalOptions & {
+  uuid: string;
 };
 
 async function getClient(opts: WebhooksGlobalOptions): Promise<Garu> {
@@ -59,29 +60,29 @@ export async function webhooksEventsListCommand(
 }
 
 export async function webhooksEventsGetCommand(
-  opts: WebhooksEventsByIdOptions
+  opts: WebhooksEventsByUuidOptions
 ): Promise<WebhookEvent> {
   const garu = await getClient(opts);
-  const event = await garu.webhookEvents.get(opts.id);
+  const event = await garu.webhookEvents.get(opts.uuid);
   printResult(event, { ...opts, prettyPrint: prettyWebhookEvent });
   return event;
 }
 
 export async function webhooksEventsRetryCommand(
-  opts: WebhooksEventsByIdOptions
+  opts: WebhooksEventsByUuidOptions
 ): Promise<WebhookEvent> {
   const garu = await getClient(opts);
-  const event = await garu.webhookEvents.retry(opts.id);
+  const event = await garu.webhookEvents.retry(opts.uuid);
   printResult(event, { ...opts, prettyPrint: prettyWebhookEvent });
   return event;
 }
 
 export async function webhooksEventsResendCommand(
-  opts: WebhooksEventsByIdOptions
+  opts: WebhooksEventsByUuidOptions
 ): Promise<WebhookEvent> {
   const garu = await getClient(opts);
-  const clone = await garu.webhookEvents.resend(opts.id);
-  printSuccess(`Resent event ${opts.id} → new event ${clone.id}`, opts);
+  const clone = await garu.webhookEvents.resend(opts.uuid);
+  printSuccess(`Resent event ${opts.uuid} → new event ${clone.uuid}`, opts);
   printResult(clone, { ...opts, prettyPrint: prettyWebhookEvent });
   return clone;
 }
@@ -97,20 +98,18 @@ function statusBadge(status: WebhookEventStatus): string {
 }
 
 function prettyWebhookEventList(list: WebhookEventList): string {
-  if (list.data.length === 0) {
-    return `No webhook events found (page ${list.meta.page}/${list.meta.totalPages || 1})`;
-  }
-  const header = `Webhook events (page ${list.meta.page}/${list.meta.totalPages || '?'}, ${list.meta.total} total)`;
+  if (list.data.length === 0) return 'No webhook events found';
+  const header = `Webhook events (${list.count} of ${list.totalCount} total, ${list.totalPages} page(s))`;
   const rows = list.data.map(
     (e) =>
-      `  ${String(e.id).padStart(8)}  ${statusBadge(e.status)}  attempts=${String(e.attempts).padStart(2)}  ${e.eventType.padEnd(38)}  ${e.createdAt}`
+      `  ${e.uuid}  ${statusBadge(e.status)}  attempts=${String(e.attempts).padStart(2)}  ${e.eventType.padEnd(38)}  ${e.createdAt}`
   );
   return [header, ...rows].join('\n');
 }
 
 function prettyWebhookEvent(event: WebhookEvent): string {
   const lines = [
-    `Webhook event ${event.id}`,
+    `Webhook event ${event.uuid}`,
     `  status:        ${statusBadge(event.status)}`,
     `  eventType:     ${event.eventType}`,
     `  attempts:      ${event.attempts}`,
@@ -122,9 +121,8 @@ function prettyWebhookEvent(event: WebhookEvent): string {
   if (event.nextRetryAt) lines.push(`  nextRetryAt:   ${event.nextRetryAt}`);
   if (event.responseStatus !== null) lines.push(`  responseStatus: ${event.responseStatus}`);
   if (event.responseBody) {
-    const body = event.responseBody.length > 200
-      ? `${event.responseBody.slice(0, 200)}…`
-      : event.responseBody;
+    const body =
+      event.responseBody.length > 200 ? `${event.responseBody.slice(0, 200)}…` : event.responseBody;
     lines.push(`  responseBody:  ${body}`);
   }
   return lines.join('\n');

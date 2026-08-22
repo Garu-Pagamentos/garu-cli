@@ -22,6 +22,9 @@ afterEach(() => {
   stderrSpy.mockRestore();
 });
 
+const EVENT_UUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const CLONE_UUID = 'f9e8d7c6-b5a4-3210-9876-543210fedcba';
+
 const fakeEndpoint = {
   id: 7,
   url: 'https://example.com/hooks/garu',
@@ -31,11 +34,10 @@ const fakeEndpoint = {
 };
 
 const fakeEvent: WebhookEvent = {
-  id: 42,
-  endpointId: 7,
+  uuid: EVENT_UUID,
   webhookEndpoint: fakeEndpoint,
   eventType: 'transaction.payment.paid',
-  payload: { transactionId: 1234, amount: 9900 },
+  payload: { id: 'evt_1a2b3c', transactionId: 1234, amount: 9900 },
   status: 'failed',
   attempts: 5,
   lastAttemptAt: '2026-05-19T12:00:00Z',
@@ -55,25 +57,30 @@ function makeFakeGaru(
         overrides.list ??
         vi.fn().mockResolvedValue({
           data: [fakeEvent],
-          meta: { page: 1, limit: 50, total: 1, totalPages: 1 }
+          count: 1,
+          totalCount: 1,
+          totalPages: 1
         }),
       get: overrides.get ?? vi.fn().mockResolvedValue(fakeEvent),
       retry:
         overrides.retry ??
-        vi
-          .fn()
-          .mockResolvedValue({ ...fakeEvent, status: 'pending', attempts: 0, responseStatus: null }),
+        vi.fn().mockResolvedValue({
+          ...fakeEvent,
+          status: 'pending',
+          attempts: 0,
+          responseStatus: null
+        }),
       resend:
         overrides.resend ??
         vi.fn().mockResolvedValue({
           ...fakeEvent,
-          id: 99,
+          uuid: CLONE_UUID,
           status: 'pending',
           attempts: 0,
           responseStatus: null,
           responseBody: null,
           lastAttemptAt: null,
-          manualResendOf: 42,
+          manualResendOf: EVENT_UUID,
           createdAt: '2026-05-19T13:00:00Z'
         })
     }
@@ -90,7 +97,7 @@ describe('webhooksEventsListCommand', () => {
 
     expect((fake.webhookEvents.list as any).mock.calls[0][0]).toEqual({});
     expect(result.data).toHaveLength(1);
-    expect(result.data[0]!.id).toBe(42);
+    expect(result.data[0]!.uuid).toBe(EVENT_UUID);
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
@@ -134,7 +141,9 @@ describe('webhooksEventsListCommand', () => {
     const fake = makeFakeGaru({
       list: vi.fn().mockResolvedValue({
         data: [],
-        meta: { page: 1, limit: 50, total: 0, totalPages: 0 }
+        count: 0,
+        totalCount: 0,
+        totalPages: 0
       })
     });
     await webhooksEventsListCommand({
@@ -148,14 +157,14 @@ describe('webhooksEventsListCommand', () => {
 });
 
 describe('webhooksEventsGetCommand', () => {
-  it('calls garu.webhookEvents.get with the parsed id', async () => {
+  it('calls garu.webhookEvents.get with the uuid', async () => {
     const fake = makeFakeGaru();
     await webhooksEventsGetCommand({
       garu: fake as any,
       mode: 'json',
-      id: 42
+      uuid: EVENT_UUID
     });
-    expect((fake.webhookEvents.get as any).mock.calls[0][0]).toBe(42);
+    expect((fake.webhookEvents.get as any).mock.calls[0][0]).toBe(EVENT_UUID);
   });
 
   it('renders pretty output with endpoint url and response body', async () => {
@@ -163,40 +172,40 @@ describe('webhooksEventsGetCommand', () => {
     await webhooksEventsGetCommand({
       garu: fake as any,
       mode: 'pretty',
-      id: 42
+      uuid: EVENT_UUID
     });
     const output = stdoutSpy.mock.calls[0][0];
-    expect(output).toContain('Webhook event 42');
+    expect(output).toContain(`Webhook event ${EVENT_UUID}`);
     expect(output).toContain('https://example.com/hooks/garu');
     expect(output).toContain('Internal Server Error');
   });
 });
 
 describe('webhooksEventsRetryCommand', () => {
-  it('calls garu.webhookEvents.retry with the parsed id and reports the reset state', async () => {
+  it('calls garu.webhookEvents.retry with the uuid and reports the reset state', async () => {
     const fake = makeFakeGaru();
     const event = await webhooksEventsRetryCommand({
       garu: fake as any,
       mode: 'json',
-      id: 42
+      uuid: EVENT_UUID
     });
-    expect((fake.webhookEvents.retry as any).mock.calls[0][0]).toBe(42);
+    expect((fake.webhookEvents.retry as any).mock.calls[0][0]).toBe(EVENT_UUID);
     expect(event.status).toBe('pending');
     expect(event.attempts).toBe(0);
   });
 });
 
 describe('webhooksEventsResendCommand', () => {
-  it('calls garu.webhookEvents.resend with the parsed id and returns the clone', async () => {
+  it('calls garu.webhookEvents.resend with the uuid and returns the clone', async () => {
     const fake = makeFakeGaru();
     const clone = await webhooksEventsResendCommand({
       garu: fake as any,
       mode: 'json',
-      id: 42
+      uuid: EVENT_UUID
     });
-    expect((fake.webhookEvents.resend as any).mock.calls[0][0]).toBe(42);
-    expect(clone.id).toBe(99);
-    expect(clone.manualResendOf).toBe(42);
+    expect((fake.webhookEvents.resend as any).mock.calls[0][0]).toBe(EVENT_UUID);
+    expect(clone.uuid).toBe(CLONE_UUID);
+    expect(clone.manualResendOf).toBe(EVENT_UUID);
     expect(clone.status).toBe('pending');
   });
 
@@ -205,29 +214,29 @@ describe('webhooksEventsResendCommand', () => {
     await webhooksEventsResendCommand({
       garu: fake as any,
       mode: 'json',
-      id: 42
+      uuid: EVENT_UUID
     });
     const stdoutPayload = stdoutSpy.mock.calls[0][0];
-    expect(stdoutPayload).toContain('"id":99');
-    expect(stdoutPayload).toContain('"manualResendOf":42');
+    expect(stdoutPayload).toContain(`"uuid":"${CLONE_UUID}"`);
+    expect(stdoutPayload).toContain(`"manualResendOf":"${EVENT_UUID}"`);
     // status banner is suppressed in JSON mode
     expect(stderrSpy).not.toHaveBeenCalled();
   });
 
-  it('prints a prominent banner with the source id and the clone id in pretty mode', async () => {
+  it('prints a prominent banner with the source uuid and the clone uuid in pretty mode', async () => {
     const fake = makeFakeGaru();
     await webhooksEventsResendCommand({
       garu: fake as any,
       mode: 'pretty',
-      id: 42
+      uuid: EVENT_UUID
     });
     const stderrOutput = stderrSpy.mock.calls.map((c: any[]) => c[0]).join('');
-    expect(stderrOutput).toContain('Resent event 42');
-    expect(stderrOutput).toContain('new event 99');
+    expect(stderrOutput).toContain(`Resent event ${EVENT_UUID}`);
+    expect(stderrOutput).toContain(`new event ${CLONE_UUID}`);
 
     const stdoutOutput = stdoutSpy.mock.calls[0][0];
-    expect(stdoutOutput).toContain('Webhook event 99');
-    expect(stdoutOutput).toContain('resendOf:      42');
+    expect(stdoutOutput).toContain(`Webhook event ${CLONE_UUID}`);
+    expect(stdoutOutput).toContain(`resendOf:      ${EVENT_UUID}`);
   });
 
   it('suppresses the banner when --quiet is set', async () => {
@@ -236,9 +245,8 @@ describe('webhooksEventsResendCommand', () => {
       garu: fake as any,
       mode: 'pretty',
       quiet: true,
-      id: 42
+      uuid: EVENT_UUID
     });
     expect(stderrSpy).not.toHaveBeenCalled();
   });
 });
-
