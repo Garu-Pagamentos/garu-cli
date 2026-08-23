@@ -39,6 +39,7 @@ export type CustomersCreateOptions = CustomersGlobalOptions & {
   neighborhood?: string;
   city?: string;
   state?: string;
+  idempotencyKey?: string;
 };
 
 export type CustomersUpdateOptions = CustomersByUuidOptions & {
@@ -98,6 +99,7 @@ export async function customersCreateCommand(
   if (opts.neighborhood !== undefined) params.neighborhood = opts.neighborhood;
   if (opts.city !== undefined) params.city = opts.city;
   if (opts.state !== undefined) params.state = opts.state;
+  if (opts.idempotencyKey !== undefined) params.idempotencyKey = opts.idempotencyKey;
 
   const customer = await garu.customers.create(params);
   printResult(customer, { ...opts, prettyPrint: prettyCustomer });

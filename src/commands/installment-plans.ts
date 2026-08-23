@@ -64,6 +64,7 @@ export type InstallmentPlansCancelOptions = InstallmentPlansByUuidOptions & {
 export type InstallmentPlansRequestRefundOptions = InstallmentPlansByUuidOptions & {
   amount?: number;
   reason?: string;
+  idempotencyKey?: string;
 };
 
 async function getClient(opts: InstallmentPlansGlobalOptions): Promise<Garu> {
@@ -174,6 +175,7 @@ export async function installmentPlansRequestRefundCommand(
   const params: RequestPlanRefundParams = {};
   if (opts.amount !== undefined) params.amount = opts.amount;
   if (opts.reason !== undefined) params.reason = opts.reason;
+  if (opts.idempotencyKey !== undefined) params.idempotencyKey = opts.idempotencyKey;
   const request = await garu.installmentPlans.requestRefund(opts.uuid, params);
   printResult(request, { ...opts, prettyPrint: prettyRefundRequest });
   return request;

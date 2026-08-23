@@ -91,6 +91,22 @@ describe('customersCreateCommand', () => {
     expect(params.city).toBe('São Paulo');
     expect(params.state).toBe('SP');
   });
+
+  it('forwards an explicit idempotency key', async () => {
+    const fake = makeFakeGaru();
+    await customersCreateCommand({
+      garu: fake as any,
+      mode: 'json',
+      name: 'Maria Silva',
+      email: 'maria@exemplo.com.br',
+      document: '12345678909',
+      phone: '11987654321',
+      personType: 'fisica',
+      idempotencyKey: 'idem-key-1'
+    });
+
+    expect((fake.customers.create as any).mock.calls[0][0].idempotencyKey).toBe('idem-key-1');
+  });
 });
 
 describe('customersListCommand', () => {

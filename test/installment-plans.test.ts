@@ -54,28 +54,24 @@ function makeFakeGaru(overrides: Record<string, unknown> = {}) {
       reissueInstallment: vi
         .fn()
         .mockResolvedValue({ status: 'emitted', reason: null, installment: null }),
-      postponeInstallment: vi
-        .fn()
-        .mockResolvedValue({
-          number: 4,
-          amount: 130,
-          dueDate: '2026-12-20',
-          status: 'scheduled',
-          paidAt: null,
-          boleto: null,
-          reissueCount: 0
-        }),
-      markInstallmentPaid: vi
-        .fn()
-        .mockResolvedValue({
-          number: 3,
-          amount: 130,
-          dueDate: '2026-09-05',
-          status: 'paid',
-          paidAt: '2026-09-05',
-          boleto: null,
-          reissueCount: 0
-        }),
+      postponeInstallment: vi.fn().mockResolvedValue({
+        number: 4,
+        amount: 130,
+        dueDate: '2026-12-20',
+        status: 'scheduled',
+        paidAt: null,
+        boleto: null,
+        reissueCount: 0
+      }),
+      markInstallmentPaid: vi.fn().mockResolvedValue({
+        number: 3,
+        amount: 130,
+        dueDate: '2026-09-05',
+        status: 'paid',
+        paidAt: '2026-09-05',
+        boleto: null,
+        reissueCount: 0
+      }),
       cancel: vi.fn().mockResolvedValue({ ...fakePlan, status: 'canceled' }),
       requestRefund: vi
         .fn()
@@ -267,6 +263,20 @@ describe('installmentPlansRequestRefundCommand', () => {
     expect((fake.installmentPlans.requestRefund as any).mock.calls[0]).toEqual([
       fakePlanUuid,
       { amount: 390, reason: 'Produto não entregue' }
+    ]);
+  });
+
+  it('forwards an explicit idempotency key', async () => {
+    const fake = makeFakeGaru();
+    await installmentPlansRequestRefundCommand({
+      garu: fake as any,
+      mode: 'json',
+      uuid: fakePlanUuid,
+      idempotencyKey: 'refund-key-1'
+    });
+    expect((fake.installmentPlans.requestRefund as any).mock.calls[0]).toEqual([
+      fakePlanUuid,
+      { idempotencyKey: 'refund-key-1' }
     ]);
   });
 });

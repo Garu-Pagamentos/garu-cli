@@ -158,6 +158,19 @@ describe('chargesRefundCommand', () => {
     });
     expect((fake.charges.refund as any).mock.calls[0][1]).toEqual({});
   });
+
+  it('forwards an explicit idempotency key', async () => {
+    const fake = makeFakeGaru();
+    await chargesRefundCommand({
+      garu: fake as any,
+      mode: 'json',
+      id: fakeChargeUuid,
+      idempotencyKey: 'refund-key-1'
+    });
+    expect((fake.charges.refund as any).mock.calls[0][1]).toEqual({
+      idempotencyKey: 'refund-key-1'
+    });
+  });
 });
 
 describe('chargesListCommand', () => {

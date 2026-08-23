@@ -3,6 +3,16 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.13.0] — 2026-08-22
+
+### Added
+
+- `--idempotency-key <key>` on `garu customers create`, `garu charges refund`,
+  and `garu installment-plans request-refund` (auto-generated if omitted).
+  The gateway now dedupes all three against the header (bumped
+  `@garuhq/node` to 4.1.0), so a retried command can no longer register a
+  duplicate customer or open a second refund request.
+
 ## [0.12.0] — 2026-08-22
 
 ### Changed

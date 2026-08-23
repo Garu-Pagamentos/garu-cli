@@ -260,13 +260,15 @@ Recipes:
       parseNonNegativeBrl(v, '--amount')
     )
     .option('--reason <text>', 'optional refund reason')
+    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
     .action(async (id: string, cmdOpts) => {
       const base = toCommandOptions(program);
       await chargesRefundCommand({
         ...base,
         id,
         amount: cmdOpts.amount,
-        reason: cmdOpts.reason
+        reason: cmdOpts.reason,
+        idempotencyKey: cmdOpts.idempotencyKey
       }).catch((err) => printErrorAndExit(err, base));
     });
 
@@ -625,6 +627,7 @@ Recipes:
     .option('--neighborhood <text>', 'neighborhood')
     .option('--city <city>', 'city')
     .option('--state <uf>', '2-letter state code, e.g. SP')
+    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await customersCreateCommand({
@@ -640,7 +643,8 @@ Recipes:
         complement: cmdOpts.complement,
         neighborhood: cmdOpts.neighborhood,
         city: cmdOpts.city,
-        state: cmdOpts.state
+        state: cmdOpts.state,
+        idempotencyKey: cmdOpts.idempotencyKey
       }).catch((err) => printErrorAndExit(err, base));
     });
 
@@ -888,15 +892,22 @@ Recipes:
       parseNonNegativeBrl(v, '--amount')
     )
     .option('--reason <text>', 'optional reason')
-    .action(async (uuid: string, cmdOpts: { amount?: number; reason?: string }) => {
-      const base = toCommandOptions(program);
-      await installmentPlansRequestRefundCommand({
-        ...base,
-        uuid,
-        amount: cmdOpts.amount,
-        reason: cmdOpts.reason
-      }).catch((err) => printErrorAndExit(err, base));
-    });
+    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .action(
+      async (
+        uuid: string,
+        cmdOpts: { amount?: number; reason?: string; idempotencyKey?: string }
+      ) => {
+        const base = toCommandOptions(program);
+        await installmentPlansRequestRefundCommand({
+          ...base,
+          uuid,
+          amount: cmdOpts.amount,
+          reason: cmdOpts.reason,
+          idempotencyKey: cmdOpts.idempotencyKey
+        }).catch((err) => printErrorAndExit(err, base));
+      }
+    );
 
   // refund-requests
   const refundRequests = program

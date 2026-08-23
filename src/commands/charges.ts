@@ -56,6 +56,7 @@ export interface ChargesRefundOptions extends ChargesByIdOptions {
   /** Amount in decimal BRL / reais, e.g. `10.00`. Omit for a full refund. */
   amount?: number;
   reason?: string;
+  idempotencyKey?: string;
 }
 
 async function getClient(opts: ChargesGlobalOptions): Promise<Garu> {
@@ -147,6 +148,7 @@ export async function chargesRefundCommand(opts: ChargesRefundOptions): Promise<
   const params: RefundChargeParams = {};
   if (opts.amount !== undefined) params.amount = opts.amount;
   if (opts.reason !== undefined) params.reason = opts.reason;
+  if (opts.idempotencyKey !== undefined) params.idempotencyKey = opts.idempotencyKey;
   const charge = await garu.charges.refund(opts.id, params);
   printResult(charge, { ...opts, prettyPrint: prettyCharge });
   return charge;
