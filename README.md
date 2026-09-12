@@ -239,6 +239,47 @@ garu charges refund 6f1c9b2e-4a7d-4f0b-9a3e-1d2c3b4a5e6f --amount 10.00 --reason
 
 ---
 
+### `garu offers`
+
+Sell one product at several prices, each behind its own link. An offer overrides the **price and nothing else** — payment methods, installments, carnê, name and image all stay on the product, and a bare product link keeps charging the product's own value.
+
+```bash
+# create — --value is in REAIS, not centavos
+garu offers create --product b3f2c1e8-6e4a-4b9f-9d1c-2a1f6c3d4e5f \
+  --name "Black Friday" --value 97.00 --slug black-friday
+
+# list (active by default)
+garu offers list --product b3f2c1e8-6e4a-4b9f-9d1c-2a1f6c3d4e5f
+garu offers list --product b3f2c1e8-... --active all
+
+# end a promo without breaking the link
+garu offers update --id offer_1Hv7j4EGexuTiOU5BlLNGGuL --no-active
+
+# only works while the offer has never sold
+garu offers delete --id offer_1Hv7j4EGexuTiOU5BlLNGGuL
+```
+
+| Subcommand | Required                         | Notes                                                     |
+| ---------- | -------------------------------- | --------------------------------------------------------- |
+| `list`     | `--product`                      | `--active true\|false\|all`, `--page`, `--limit`          |
+| `get`      | `--id`                           |                                                           |
+| `create`   | `--product`, `--name`, `--value` | `--slug`, `--inactive`                                    |
+| `update`   | `--id` + at least one field      | `--name`, `--value`, `--slug`, `--active` / `--no-active` |
+| `delete`   | `--id`                           | 409 once the offer has sales — deactivate instead         |
+
+In a terminal, `list` prints the link fragment you actually paste:
+
+```
+● Black Friday                  R$ 97,00  ?offer=black-friday
+○ Natal 2025                   R$ 147,00  ?offer=natal-2025
+```
+
+Piped or in CI it emits JSON instead, like every other command.
+
+> **The slug is public and guessable.** Anyone holding the product link can try `?offer=promo`. Omit `--slug` for pricing that should not circulate — the link then carries the unguessable offer id.
+
+---
+
 ### `garu scheduled-charges create`
 
 Schedule a future-dated charge — one-time or recurring (PIX, Boleto, or Card).

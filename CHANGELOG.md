@@ -3,6 +3,22 @@
 All notable changes to `@garuhq/cli` are documented in this file. Format:
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.14.0] — 2026-09-12
+
+Adds `garu offers` — list, get, create, update, delete. An offer is a named
+price on a product behind its own link, overriding the price and nothing else
+(Garu v0.23.0).
+
+`--value` is in REAIS, not centavos, matching `products create --value`.
+
+In a terminal `offers list` prints the `?offer=` fragment you paste, falling
+back to the offer id when there is no slug; piped or in CI it emits JSON like
+every other command.
+
+Requires `@garuhq/node` 5.2.0 (was 4.1.0). The only breaking change in that
+range is 5.0.0 dropping auto-generated idempotency keys, which the CLI never
+relied on — it forwards whatever the caller passes.
+
 ## [0.13.0] — 2026-08-22
 
 ### Added

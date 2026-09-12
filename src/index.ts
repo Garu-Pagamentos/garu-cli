@@ -29,6 +29,13 @@ import {
 } from './commands/installment-plans.js';
 import { loginCommand } from './commands/login.js';
 import { logoutCommand } from './commands/logout.js';
+import {
+  offersCreateCommand,
+  offersDeleteCommand,
+  offersGetCommand,
+  offersListCommand,
+  offersUpdateCommand
+} from './commands/offers.js';
 import { productsCreateCommand, productsUpdateCommand } from './commands/products.js';
 import {
   refundRequestsConfirmCommand,
@@ -978,6 +985,94 @@ Recipes:
       await refundRequestsRejectCommand({ ...base, uuid, note: cmdOpts.note }).catch((err) =>
         printErrorAndExit(err, base)
       );
+    });
+
+  // offers — a named price on a product, each behind its own link (v0.23.0).
+  // An offer overrides the PRICE and nothing else; a bare product link keeps
+  // charging the product's own value.
+  const offers = program
+    .command('offers')
+    .description('Sell one product at several prices, each behind its own link');
+
+  offers
+    .command('list')
+    .description("List a product's offers")
+    .requiredOption('--product <uuid>', 'product UUID')
+    .option('--active <filter>', "'true' (default), 'false', or 'all'")
+    .option('--page <n>', 'page number', (v: string) => parsePositiveIntId(v, '--page'))
+    .option('--limit <n>', 'items per page', (v: string) => parsePositiveIntId(v, '--limit'))
+    .action(async (cmdOpts) => {
+      await offersListCommand({
+        ...toCommandOptions(program),
+        product: cmdOpts.product,
+        active: cmdOpts.active,
+        page: cmdOpts.page,
+        limit: cmdOpts.limit
+      });
+    });
+
+  offers
+    .command('get')
+    .description('Show one offer')
+    .requiredOption('--id <offerId>', 'offer id, e.g. offer_1Hv7j4EGexuTiOU5BlLNGGuL')
+    .action(async (cmdOpts) => {
+      await offersGetCommand({ ...toCommandOptions(program), id: cmdOpts.id });
+    });
+
+  offers
+    .command('create')
+    .description('Create an offer on a product')
+    .requiredOption('--product <uuid>', 'product UUID')
+    .requiredOption('--name <name>', 'seller-facing label, never shown to the buyer')
+    .requiredOption(
+      '--value <reais>',
+      'price in reais / decimal BRL (e.g. 97.00), NOT centavos',
+      (v: string) => parseNonNegativeBrl(v, '--value')
+    )
+    .option(
+      '--slug <slug>',
+      'link identifier used as ?offer=<slug>. PUBLIC and guessable — omit it to use the unguessable id instead'
+    )
+    .option('--inactive', 'create it switched off')
+    .action(async (cmdOpts) => {
+      await offersCreateCommand({
+        ...toCommandOptions(program),
+        product: cmdOpts.product,
+        name: cmdOpts.name,
+        value: cmdOpts.value,
+        slug: cmdOpts.slug,
+        ...(cmdOpts.inactive ? { active: false } : {})
+      });
+    });
+
+  offers
+    .command('update')
+    .description('Reprice, rename, or activate/deactivate an offer')
+    .requiredOption('--id <offerId>', 'offer id')
+    .option('--name <name>', 'new label')
+    .option('--value <reais>', 'new price in reais, NOT centavos', (v: string) =>
+      parseNonNegativeBrl(v, '--value')
+    )
+    .option('--slug <slug>', 'new link identifier')
+    .option('--active', 'switch the offer on')
+    .option('--no-active', 'switch it off — the link falls back to the product price')
+    .action(async (cmdOpts) => {
+      await offersUpdateCommand({
+        ...toCommandOptions(program),
+        id: cmdOpts.id,
+        name: cmdOpts.name,
+        value: cmdOpts.value,
+        slug: cmdOpts.slug,
+        active: cmdOpts.active
+      });
+    });
+
+  offers
+    .command('delete')
+    .description('Delete an offer — only while it has never sold')
+    .requiredOption('--id <offerId>', 'offer id')
+    .action(async (cmdOpts) => {
+      await offersDeleteCommand({ ...toCommandOptions(program), id: cmdOpts.id });
     });
 
   // products
