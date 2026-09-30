@@ -121,6 +121,7 @@ Recipes:
     # 1. Create a product with Pix Automático enabled
     garu products create \\
       --name "Plano Mensal" --value 49.90 \\
+      --image https://cdn.exemplo.com/plano-mensal.png \\
       --pix --credit-card --pix-automatic \\
       --subscription --subscription-type monthly
 
@@ -503,8 +504,10 @@ Recipes:
   scheduled
     .command('change-payment-method <id>')
     .description('Swap the saved card on a recurring series (recurring-only)')
-    .requiredOption('--payment-method-id <n>', 'PaymentMethod id (same customer)', (v: string) =>
-      parsePositiveIntId(v, '--payment-method-id')
+    .requiredOption(
+      '--payment-method-id <n>',
+      'PaymentMethod id: same customer, and it must already bill one of your charges for that customer (else 404)',
+      (v: string) => parsePositiveIntId(v, '--payment-method-id')
     )
     .action(async (id: string, cmdOpts: { paymentMethodId: number }) => {
       const base = toCommandOptions(program);
@@ -1026,7 +1029,7 @@ Recipes:
     .requiredOption('--name <name>', 'seller-facing label, never shown to the buyer')
     .requiredOption(
       '--value <reais>',
-      'price in reais / decimal BRL (e.g. 97.00), NOT centavos',
+      'price in reais / decimal BRL (e.g. 97.00), NOT centavos. Minimum 5.00',
       (v: string) => parseNonNegativeBrl(v, '--value')
     )
     .option(
@@ -1050,7 +1053,7 @@ Recipes:
     .description('Reprice, rename, or activate/deactivate an offer')
     .requiredOption('--id <offerId>', 'offer id')
     .option('--name <name>', 'new label')
-    .option('--value <reais>', 'new price in reais, NOT centavos', (v: string) =>
+    .option('--value <reais>', 'new price in reais, NOT centavos. Minimum 5.00', (v: string) =>
       parseNonNegativeBrl(v, '--value')
     )
     .option('--slug <slug>', 'new link identifier')
@@ -1082,11 +1085,13 @@ Recipes:
     .command('create')
     .description('Create a product')
     .requiredOption('--name <name>', 'product name')
-    .option('--value <reais>', 'price in reais / decimal BRL (e.g. 49.90)', (v: string) =>
-      parseNonNegativeBrl(v, '--value')
+    .option(
+      '--value <reais>',
+      'price in reais / decimal BRL (e.g. 49.90), required by the API. 0 = no price (cannot be sold through its payment link), otherwise at least 5.00',
+      (v: string) => parseNonNegativeBrl(v, '--value')
     )
     .option('--description <text>', 'product description')
-    .option('--image <url>', 'HTTPS URL of the product cover image')
+    .option('--image <url>', 'HTTPS URL of the product cover image, required by the API')
     .option('--tags <list>', 'comma-separated tags', parseCsvList)
     .option('--pix', 'accept PIX')
     .option('--no-pix', 'do not accept PIX')
@@ -1133,8 +1138,10 @@ Recipes:
       'Update a product (partial — only the flags you pass change). <id> is the numeric id or UUID'
     )
     .option('--name <name>', 'product name')
-    .option('--value <reais>', 'price in reais / decimal BRL (e.g. 49.90)', (v: string) =>
-      parseNonNegativeBrl(v, '--value')
+    .option(
+      '--value <reais>',
+      'price in reais / decimal BRL (e.g. 49.90). 0 = no price, otherwise at least 5.00. Omit it to keep the current price',
+      (v: string) => parseNonNegativeBrl(v, '--value')
     )
     .option('--description <text>', 'product description')
     .option('--image <url>', 'HTTPS URL of the product cover image')
