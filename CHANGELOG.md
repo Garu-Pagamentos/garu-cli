@@ -26,6 +26,14 @@ describe rules the gateway enforces since Garu v0.27.0 and v0.27.1
   API refused the create.
 - README: new `garu products` section.
 
+### Fixed
+
+- **`--idempotency-key` said "auto-generated if omitted".** It is not: the CLI
+  forwards a key only when you pass one, and `@garuhq/node` stopped generating
+  one in 5.0.0 (this CLI uses 5.2.0 since 0.14.0). The help on the six commands
+  that take it, and the README, now say none is sent if omitted. Pass a stable
+  key when a retry must not create a second charge, refund, series or carnê.
+
 ## [0.14.0] — 2026-09-12
 
 Adds `garu offers` — list, get, create, update, delete. An offer is a named

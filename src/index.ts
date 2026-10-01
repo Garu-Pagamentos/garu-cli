@@ -232,7 +232,10 @@ Recipes:
     .option('--card-holder <name>', 'credit-card holder name')
     .option('--installments <n>', 'number of installments (1-12)', (v) => parseInt(v, 10), 1)
     .option('--additional-info <text>', 'free-form metadata attached to the charge')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await chargesCreateCommand({
@@ -268,7 +271,10 @@ Recipes:
       parseNonNegativeBrl(v, '--amount')
     )
     .option('--reason <text>', 'optional refund reason')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (id: string, cmdOpts) => {
       const base = toCommandOptions(program);
       await chargesRefundCommand({
@@ -319,7 +325,10 @@ Recipes:
       '--max-recovery-days <n>',
       'days past due the recovery sweep keeps auto-billing (1-365; default 14)'
     )
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await scheduledChargesCreateCommand({
@@ -640,7 +649,10 @@ Recipes:
     .option('--neighborhood <text>', 'neighborhood')
     .option('--city <city>', 'city')
     .option('--state <uf>', '2-letter state code, e.g. SP')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await customersCreateCommand({
@@ -781,7 +793,10 @@ Recipes:
       'attribute the sale to this affiliate (fixed for the whole plan)',
       (v: string) => parsePositiveIntId(v, '--affiliate-id')
     )
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await installmentPlansCreateCommand({
@@ -905,7 +920,10 @@ Recipes:
       parseNonNegativeBrl(v, '--amount')
     )
     .option('--reason <text>', 'optional reason')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(
       async (
         uuid: string,

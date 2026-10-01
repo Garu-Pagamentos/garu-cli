@@ -205,7 +205,7 @@ garu charges create --type credit_card --product-id prod-uuid \
 | `--card-holder <name>`        | credit_card | Cardholder name                                |
 | `--installments <n>`          | No          | Number of installments, 1-12 (default: 1)      |
 | `--additional-info <text>`    | No          | Free-form metadata                             |
-| `--idempotency-key <key>`     | No          | Idempotency key (auto-generated if omitted)    |
+| `--idempotency-key <key>`     | No          | Idempotency key. None is sent if omitted       |
 
 ---
 
@@ -336,7 +336,7 @@ garu scheduled-charges create \
 | `--external-reference <ref>`      | Your own reconciliation reference                                         |
 | `--metadata <json>`               | JSON object of custom metadata                                            |
 | `--max-recovery-days <n>`         | Days past due the recovery sweep keeps auto-billing (1–365; default 14)   |
-| `--idempotency-key <key>`         | Idempotency key (auto-generated if omitted)                               |
+| `--idempotency-key <key>`         | Idempotency key. None is sent if omitted                                  |
 
 `--amount` must be at least `5.00` (R$ 5,00, the platform minimum per charge), one-time and recurring alike; a lower amount answers 400. Charges created before the minimum existed keep their amount and keep billing.
 
@@ -418,7 +418,7 @@ garu installment-plans create \
 | `--installments <n>`      | 2–12 installments — required                                    |
 | `--first-due-date <date>` | First installment due date (default: today)                     |
 | `--affiliate-id <n>`      | Attribute the sale to this affiliate (fixed for the whole plan) |
-| `--idempotency-key <key>` | Idempotency key (auto-generated if omitted)                     |
+| `--idempotency-key <key>` | Idempotency key. None is sent if omitted                        |
 
 ---
 
