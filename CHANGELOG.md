@@ -6,7 +6,8 @@ All notable changes to `@garuhq/cli` are documented in this file. Format:
 ## [Unreleased]
 
 Help text and README only. No flag, argument or behaviour changes. They now
-describe rules the gateway enforces since Garu v0.27.0 (2026-09-30).
+describe rules the gateway enforces since Garu v0.27.0 and v0.27.1
+(2026-09-30).
 
 ### Changed
 
@@ -16,6 +17,9 @@ describe rules the gateway enforces since Garu v0.27.0 (2026-09-30).
   when you pass `--value`. The `create` help says the API requires `--value`
   and `--image`.
 - **`garu offers create` / `update --value`**: at least `5.00`; `0` is refused.
+- **`garu scheduled-charges create --amount`**: at least `5.00`, one-time and
+  recurring alike (Garu v0.27.1); a lower amount answers 400. Existing charges
+  keep their amount and keep billing.
 - **`garu scheduled-charges change-payment-method`**: the card must already bill
   one of your charges for that customer, else 404.
 - The Pix Automático recipe in `garu --help` passes `--image`. Without it the

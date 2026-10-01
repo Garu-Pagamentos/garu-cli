@@ -322,7 +322,7 @@ garu scheduled-charges create \
 | Flag                              | Description                                                               |
 | --------------------------------- | ------------------------------------------------------------------------- |
 | `--customer-id <n>`               | Customer id (required)                                                    |
-| `--amount <brl>`                  | Decimal BRL amount, e.g. `297.50` (required)                              |
+| `--amount <brl>`                  | Decimal BRL amount, e.g. `297.50`, at least `5.00` (required)             |
 | `--type <type>`                   | `one_time` or `recurring` (required)                                      |
 | `--due-date <yyyy-mm-dd>`         | First due date in São Paulo time (required)                               |
 | `--methods <list>`                | Comma-separated: `pix,boleto,card` (required; `card` is recurring-only)   |
@@ -337,6 +337,8 @@ garu scheduled-charges create \
 | `--metadata <json>`               | JSON object of custom metadata                                            |
 | `--max-recovery-days <n>`         | Days past due the recovery sweep keeps auto-billing (1–365; default 14)   |
 | `--idempotency-key <key>`         | Idempotency key (auto-generated if omitted)                               |
+
+`--amount` must be at least `5.00` (R$ 5,00, the platform minimum per charge), one-time and recurring alike; a lower amount answers 400. Charges created before the minimum existed keep their amount and keep billing.
 
 ---
 

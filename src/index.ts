@@ -291,7 +291,10 @@ Recipes:
     .requiredOption('--customer-id <n>', 'customer id', (v: string) =>
       parsePositiveIntId(v, '--customer-id')
     )
-    .requiredOption('--amount <brl>', 'decimal BRL amount, e.g. 297.50')
+    .requiredOption(
+      '--amount <brl>',
+      'decimal BRL amount, e.g. 297.50, NOT centavos. Minimum 5.00 (one-time and recurring)'
+    )
     .requiredOption('--type <type>', 'one_time | recurring')
     .requiredOption('--due-date <yyyy-mm-dd>', 'first due date in São Paulo time')
     .requiredOption('--methods <list>', 'comma-separated: pix,boleto,card,pix_automatic')
