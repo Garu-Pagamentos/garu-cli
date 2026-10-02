@@ -16,7 +16,10 @@ export type ProductsGlobalOptions = OutputOptions & {
 /** Write fields shared by create and update. */
 export type ProductWriteOptions = ProductsGlobalOptions & {
   name?: string;
-  /** Price in decimal BRL / reais (e.g. `49.90`) — NOT centavos. Matches the API and `Product.value`. */
+  /**
+   * Price in decimal BRL / reais (e.g. `49.90`) — NOT centavos. Matches the API and `Product.value`.
+   * `0` (a product with no price) or at least R$ 5,00; the API answers 400 otherwise.
+   */
   value?: number;
   description?: string;
   image?: string;

@@ -23,7 +23,10 @@ export type OffersListOptions = OffersGlobalOptions & {
 /** Write fields shared by create and update. */
 export type OfferWriteOptions = OffersGlobalOptions & {
   name?: string;
-  /** Price in decimal BRL / reais (e.g. `97.00`) — NOT centavos, same unit as `Product.value`. */
+  /**
+   * Price in decimal BRL / reais (e.g. `97.00`) — NOT centavos, same unit as `Product.value`.
+   * At least R$ 5,00; the API answers 400 otherwise, `0` included.
+   */
   value?: number;
   slug?: string | null;
   active?: boolean;

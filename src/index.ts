@@ -121,6 +121,7 @@ Recipes:
     # 1. Create a product with Pix Automático enabled
     garu products create \\
       --name "Plano Mensal" --value 49.90 \\
+      --image https://cdn.exemplo.com/plano-mensal.png \\
       --pix --credit-card --pix-automatic \\
       --subscription --subscription-type monthly
 
@@ -231,7 +232,10 @@ Recipes:
     .option('--card-holder <name>', 'credit-card holder name')
     .option('--installments <n>', 'number of installments (1-12)', (v) => parseInt(v, 10), 1)
     .option('--additional-info <text>', 'free-form metadata attached to the charge')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await chargesCreateCommand({
@@ -267,7 +271,10 @@ Recipes:
       parseNonNegativeBrl(v, '--amount')
     )
     .option('--reason <text>', 'optional refund reason')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (id: string, cmdOpts) => {
       const base = toCommandOptions(program);
       await chargesRefundCommand({
@@ -290,7 +297,10 @@ Recipes:
     .requiredOption('--customer-id <n>', 'customer id', (v: string) =>
       parsePositiveIntId(v, '--customer-id')
     )
-    .requiredOption('--amount <brl>', 'decimal BRL amount, e.g. 297.50')
+    .requiredOption(
+      '--amount <brl>',
+      'decimal BRL amount, e.g. 297.50, NOT centavos. Minimum 5.00 (one-time and recurring)'
+    )
     .requiredOption('--type <type>', 'one_time | recurring')
     .requiredOption('--due-date <yyyy-mm-dd>', 'first due date in São Paulo time')
     .requiredOption('--methods <list>', 'comma-separated: pix,boleto,card,pix_automatic')
@@ -315,7 +325,10 @@ Recipes:
       '--max-recovery-days <n>',
       'days past due the recovery sweep keeps auto-billing (1-365; default 14)'
     )
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await scheduledChargesCreateCommand({
@@ -503,8 +516,10 @@ Recipes:
   scheduled
     .command('change-payment-method <id>')
     .description('Swap the saved card on a recurring series (recurring-only)')
-    .requiredOption('--payment-method-id <n>', 'PaymentMethod id (same customer)', (v: string) =>
-      parsePositiveIntId(v, '--payment-method-id')
+    .requiredOption(
+      '--payment-method-id <n>',
+      'PaymentMethod id: same customer, and it must already bill one of your charges for that customer (else 404)',
+      (v: string) => parsePositiveIntId(v, '--payment-method-id')
     )
     .action(async (id: string, cmdOpts: { paymentMethodId: number }) => {
       const base = toCommandOptions(program);
@@ -634,7 +649,10 @@ Recipes:
     .option('--neighborhood <text>', 'neighborhood')
     .option('--city <city>', 'city')
     .option('--state <uf>', '2-letter state code, e.g. SP')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await customersCreateCommand({
@@ -775,7 +793,10 @@ Recipes:
       'attribute the sale to this affiliate (fixed for the whole plan)',
       (v: string) => parsePositiveIntId(v, '--affiliate-id')
     )
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(async (cmdOpts) => {
       const base = toCommandOptions(program);
       await installmentPlansCreateCommand({
@@ -899,7 +920,10 @@ Recipes:
       parseNonNegativeBrl(v, '--amount')
     )
     .option('--reason <text>', 'optional reason')
-    .option('--idempotency-key <key>', 'idempotency key (auto-generated if omitted)')
+    .option(
+      '--idempotency-key <key>',
+      'idempotency key; none is sent if omitted. Pass a stable one to make a retry safe'
+    )
     .action(
       async (
         uuid: string,
@@ -1026,7 +1050,7 @@ Recipes:
     .requiredOption('--name <name>', 'seller-facing label, never shown to the buyer')
     .requiredOption(
       '--value <reais>',
-      'price in reais / decimal BRL (e.g. 97.00), NOT centavos',
+      'price in reais / decimal BRL (e.g. 97.00), NOT centavos. Minimum 5.00',
       (v: string) => parseNonNegativeBrl(v, '--value')
     )
     .option(
@@ -1050,7 +1074,7 @@ Recipes:
     .description('Reprice, rename, or activate/deactivate an offer')
     .requiredOption('--id <offerId>', 'offer id')
     .option('--name <name>', 'new label')
-    .option('--value <reais>', 'new price in reais, NOT centavos', (v: string) =>
+    .option('--value <reais>', 'new price in reais, NOT centavos. Minimum 5.00', (v: string) =>
       parseNonNegativeBrl(v, '--value')
     )
     .option('--slug <slug>', 'new link identifier')
@@ -1082,11 +1106,13 @@ Recipes:
     .command('create')
     .description('Create a product')
     .requiredOption('--name <name>', 'product name')
-    .option('--value <reais>', 'price in reais / decimal BRL (e.g. 49.90)', (v: string) =>
-      parseNonNegativeBrl(v, '--value')
+    .option(
+      '--value <reais>',
+      'price in reais / decimal BRL (e.g. 49.90), required by the API. 0 = no price (cannot be sold through its payment link), otherwise at least 5.00',
+      (v: string) => parseNonNegativeBrl(v, '--value')
     )
     .option('--description <text>', 'product description')
-    .option('--image <url>', 'HTTPS URL of the product cover image')
+    .option('--image <url>', 'HTTPS URL of the product cover image, required by the API')
     .option('--tags <list>', 'comma-separated tags', parseCsvList)
     .option('--pix', 'accept PIX')
     .option('--no-pix', 'do not accept PIX')
@@ -1133,8 +1159,10 @@ Recipes:
       'Update a product (partial — only the flags you pass change). <id> is the numeric id or UUID'
     )
     .option('--name <name>', 'product name')
-    .option('--value <reais>', 'price in reais / decimal BRL (e.g. 49.90)', (v: string) =>
-      parseNonNegativeBrl(v, '--value')
+    .option(
+      '--value <reais>',
+      'price in reais / decimal BRL (e.g. 49.90). 0 = no price, otherwise at least 5.00. Omit it to keep the current price',
+      (v: string) => parseNonNegativeBrl(v, '--value')
     )
     .option('--description <text>', 'product description')
     .option('--image <url>', 'HTTPS URL of the product cover image')

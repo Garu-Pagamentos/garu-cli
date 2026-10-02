@@ -205,7 +205,7 @@ garu charges create --type credit_card --product-id prod-uuid \
 | `--card-holder <name>`        | credit_card | Cardholder name                                |
 | `--installments <n>`          | No          | Number of installments, 1-12 (default: 1)      |
 | `--additional-info <text>`    | No          | Free-form metadata                             |
-| `--idempotency-key <key>`     | No          | Idempotency key (auto-generated if omitted)    |
+| `--idempotency-key <key>`     | No          | Idempotency key. None is sent if omitted       |
 
 ---
 
@@ -239,12 +239,30 @@ garu charges refund 6f1c9b2e-4a7d-4f0b-9a3e-1d2c3b4a5e6f --amount 10.00 --reason
 
 ---
 
+### `garu products`
+
+Create and update products. `--value` is in **reais** (decimal BRL), not centavos.
+
+```bash
+# create — the API requires --name, --image and --value
+garu products create --name "Curso de Fotografia" --value 297.50 \
+  --image https://cdn.exemplo.com/produtos/fotografia.png --pix --credit-card
+
+# update — only the flags you pass change
+garu products update b3f2c1e8-6e4a-4b9f-9d1c-2a1f6c3d4e5f --value 247.50
+garu products update b3f2c1e8-6e4a-4b9f-9d1c-2a1f6c3d4e5f --name "Curso de Fotografia 2.0"
+```
+
+**Minimum price R$ 5,00.** `--value` must be `0` or at least `5.00`; from `0.01` to `4.99` the API answers 400. `0` is a product with no price: it is accepted, but it cannot be sold through its payment link. On a `--subscription` product the product's own value is not checked. `update` checks the price only when you pass `--value` or turn a subscription product into a one-time one (`--no-subscription`), so a product priced below R$ 5,00 before the minimum existed keeps selling.
+
+---
+
 ### `garu offers`
 
 Sell one product at several prices, each behind its own link. An offer overrides the **price and nothing else** — payment methods, installments, carnê, name and image all stay on the product, and a bare product link keeps charging the product's own value.
 
 ```bash
-# create — --value is in REAIS, not centavos
+# create — --value is in REAIS, not centavos, and at least 5.00
 garu offers create --product b3f2c1e8-6e4a-4b9f-9d1c-2a1f6c3d4e5f \
   --name "Black Friday" --value 97.00 --slug black-friday
 
@@ -266,6 +284,8 @@ garu offers delete --id offer_1Hv7j4EGexuTiOU5BlLNGGuL
 | `create`   | `--product`, `--name`, `--value` | `--slug`, `--inactive`                                    |
 | `update`   | `--id` + at least one field      | `--name`, `--value`, `--slug`, `--active` / `--no-active` |
 | `delete`   | `--id`                           | 409 once the offer has sales — deactivate instead         |
+
+An offer's `--value` must be at least `5.00` (R$ 5,00, the platform minimum price); a lower value, `0` included, answers 400. `update` checks it only when you pass `--value`, so `--no-active` still works on an older offer priced below R$ 5,00.
 
 In a terminal, `list` prints the link fragment you actually paste:
 
@@ -302,7 +322,7 @@ garu scheduled-charges create \
 | Flag                              | Description                                                               |
 | --------------------------------- | ------------------------------------------------------------------------- |
 | `--customer-id <n>`               | Customer id (required)                                                    |
-| `--amount <brl>`                  | Decimal BRL amount, e.g. `297.50` (required)                              |
+| `--amount <brl>`                  | Decimal BRL amount, e.g. `297.50`, at least `5.00` (required)             |
 | `--type <type>`                   | `one_time` or `recurring` (required)                                      |
 | `--due-date <yyyy-mm-dd>`         | First due date in São Paulo time (required)                               |
 | `--methods <list>`                | Comma-separated: `pix,boleto,card` (required; `card` is recurring-only)   |
@@ -316,7 +336,9 @@ garu scheduled-charges create \
 | `--external-reference <ref>`      | Your own reconciliation reference                                         |
 | `--metadata <json>`               | JSON object of custom metadata                                            |
 | `--max-recovery-days <n>`         | Days past due the recovery sweep keeps auto-billing (1–365; default 14)   |
-| `--idempotency-key <key>`         | Idempotency key (auto-generated if omitted)                               |
+| `--idempotency-key <key>`         | Idempotency key. None is sent if omitted                                  |
+
+`--amount` must be at least `5.00` (R$ 5,00, the platform minimum per charge), one-time and recurring alike; a lower amount answers 400. Charges created before the minimum existed keep their amount and keep billing.
 
 ---
 
@@ -362,7 +384,7 @@ The process **exits non-zero** when:
 | `mark-paid <id> --payment-date <date> [--external-reference --cycle-number]` | Mark paid out-of-band (`--cycle-number` required for recurring)                   |
 | `cancel-recurrence <id> [--reason]`                                          | Stop future cycles of a recurring series                                          |
 | `cancel-at-period-end <id> [--disable]`                                      | Toggle Stripe-style soft cancel (omit `--disable` to enable)                      |
-| `change-payment-method <id> --payment-method-id <n>`                         | Swap the saved card on a recurring series                                         |
+| `change-payment-method <id> --payment-method-id <n>`                         | Swap the saved card. It must already bill one of your charges, else 404           |
 | `clear-payment-method <id>`                                                  | Clear the saved card (future cycles fall back to email-with-link)                 |
 | `attempts <id> [--page --limit --cycle-number]`                              | Per-attempt billing log                                                           |
 
@@ -396,7 +418,7 @@ garu installment-plans create \
 | `--installments <n>`      | 2–12 installments — required                                    |
 | `--first-due-date <date>` | First installment due date (default: today)                     |
 | `--affiliate-id <n>`      | Attribute the sale to this affiliate (fixed for the whole plan) |
-| `--idempotency-key <key>` | Idempotency key (auto-generated if omitted)                     |
+| `--idempotency-key <key>` | Idempotency key. None is sent if omitted                        |
 
 ---
 
